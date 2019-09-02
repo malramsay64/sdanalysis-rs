@@ -1,0 +1,16 @@
+[package]
+name = "sdanalysis"
+version = "0.1.0"
+authors = ["Malcolm Ramsay <malramsay64@gmail.com>"]
+edition = "2018"
+
+[workspace]
+members = [
+    "gsd",
+]
+
+[dependencies]
+gsd = {path="gsd", version="0.1.0"}
+ndarray = "0.12.1"
+clap = "*"
+simple-error = "0.2.1"
