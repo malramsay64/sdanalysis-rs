@@ -130,6 +130,10 @@ impl<'a> Iterator for GSDTrajectory {
         self.curr += 1;
         Some(frame)
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.nframes() as usize))
+    }
 }
 
 #[cfg(test)]
