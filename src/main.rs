@@ -1,6 +1,7 @@
 use clap::{App, Arg};
 use indicatif::ProgressIterator;
 use serde::Serialize;
+use simple_error::SimpleResult;
 
 use csv;
 use gsd::GSDTrajectory;
@@ -23,7 +24,7 @@ impl Row {
     }
 }
 
-fn main() {
+fn main() -> SimpleResult<()> {
     let matches = App::new("GSD Parser")
         .version("0.1")
         .author("Malcolm Ramsay")
@@ -45,10 +46,11 @@ fn main() {
 
     let mut wtr = csv::Writer::from_path("test.csv").unwrap();
 
-    for frame in GSDTrajectory::new(filename).progress() {
+    for frame in GSDTrajectory::new(filename)?.progress() {
         for (index, value) in orientational_order(&frame, 3.5).into_iter().enumerate() {
             wtr.serialize(Row::new(index, frame.timestep as usize, value))
                 .unwrap();
         }
     }
+    Ok(())
 }

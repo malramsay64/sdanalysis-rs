@@ -46,28 +46,41 @@ impl GSDFrame {
     }
 }
 
+/// A handle to a GSD Trajectory allowing interaction
+///
+/// This provides a handle to interact with a GSD file, providing utilties to read individual
+/// frames in addition to being able to iterate over the entire trajectory. This provides a safe
+/// wrapper to the `gsd_open` funnction.
 pub struct GSDTrajectory {
     curr: u64,
+    // The handle reuqires many mutable references, so the UnsafeCell construct is the most
+    // sensible for this use case. Additionally it doesn't support Sync so handling a trajecotry
+    // in multiple threads is currently unsupported.
     file_handle: UnsafeCell<GSDHandle>,
 }
 
 impl GSDTrajectory {
-    pub fn new(filename: &str) -> GSDTrajectory {
+    pub fn new(filename: &str) -> SimpleResult<GSDTrajectory> {
         let fname = CString::new(filename).unwrap();
         let mut handle = MaybeUninit::<GSDHandle>::uninit();
         let handle = unsafe {
-            gsd_open(
+            let retvalue = gsd_open(
                 handle.as_mut_ptr(),
                 fname.as_ptr(),
                 gsd_open_flag_GSD_OPEN_READONLY,
             );
+            // Check return value
+            if retvalue != 0 {
+                bail!("Opening file failed.")
+            }
+            // Opening file succeeded, assume handle is initialised
             handle.assume_init()
         };
 
-        GSDTrajectory {
+        Ok(GSDTrajectory {
             curr: 0,
             file_handle: UnsafeCell::new(handle),
-        }
+        })
     }
 
     pub fn nframes(&self) -> u64 {
@@ -98,11 +111,14 @@ impl GSDTrajectory {
                     std::mem::size_of::<T>()
                 );
             }
-            gsd_read_chunk(
+            let returnval = gsd_read_chunk(
                 self.file_handle.get(),
                 chunk as *mut [T] as *mut c_void,
                 gsd_index,
             );
+            if returnval != 0 {
+                bail!("Reading chunk '{}' failed", name)
+            }
         }
         Ok(())
     }
