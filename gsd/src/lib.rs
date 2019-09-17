@@ -4,7 +4,6 @@
 // Distributed under terms of the MIT license.
 //
 
-use ndarray::Array2;
 use simple_error::{bail, SimpleResult};
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CString};
@@ -25,21 +24,25 @@ use gsd_bindings::*;
 
 pub struct GSDFrame {
     pub timestep: u64,
-    pub position: Array2<f32>,
-    pub orientation: Array2<f32>,
-    pub image: Array2<i32>,
+    pub position: Vec<[f32; 3]>,
+    pub orientation: Vec<[f32; 4]>,
+    pub image: Vec<[i32; 3]>,
     pub simulation_cell: [f32; 6],
 }
 
 impl GSDFrame {
-    fn new(n: u64) -> GSDFrame {
+    fn new(n: usize) -> GSDFrame {
         GSDFrame {
             timestep: 0,
-            position: Array2::zeros((n as usize, 3)),
-            orientation: Array2::zeros((n as usize, 4)),
-            image: Array2::zeros((n as usize, 3)),
+            position: vec![[0.; 3]; n],
+            orientation: vec![[0.; 4]; n],
+            image: vec![[0; 3]; n],
             simulation_cell: [0.; 6],
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.position.len()
     }
 }
 
@@ -107,28 +110,14 @@ impl GSDTrajectory {
     pub fn get_frame(&self, index: u64) -> SimpleResult<GSDFrame> {
         let mut num_particles = [0_u32; 1];
         self.read_chunk(index, "particles/N", &mut num_particles)?;
-        println!("Num Particles: {}", num_particles[0]);
-        let mut frame = GSDFrame::new(num_particles[0] as u64);
+        let mut frame = GSDFrame::new(num_particles[0] as usize);
         let mut timestep = [0_u64; 1];
         self.read_chunk(index, "configuration/step", &mut timestep)?;
         frame.timestep = timestep[0];
         self.read_chunk(index, "configuration/box", &mut frame.simulation_cell)?;
-        self.read_chunk(
-            index,
-            "particles/orientation",
-            frame.orientation.as_slice_memory_order_mut().unwrap(),
-        )?;
-        self.read_chunk(
-            index,
-            "particles/position",
-            frame.position.as_slice_memory_order_mut().unwrap(),
-        )?;
-        self.read_chunk(
-            index,
-            "particles/image",
-            frame.image.as_slice_memory_order_mut().unwrap(),
-        )?;
-
+        self.read_chunk(index, "particles/orientation", &mut frame.orientation)?;
+        self.read_chunk(index, "particles/position", &mut frame.position)?;
+        self.read_chunk(index, "particles/image", &mut frame.image)?;
         Ok(frame)
     }
 }
