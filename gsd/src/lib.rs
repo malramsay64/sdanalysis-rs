@@ -93,9 +93,15 @@ impl GSDTrajectory {
             let gsd_index: *const GSDIndexEntry =
                 gsd_find_chunk(self.file_handle.get(), index, c_name.as_ptr());
 
+            // When the find chunk fails, it returns a null pointer
+            if gsd_index.is_null() {
+                bail!("Creating handle failed");
+            }
+
             let expected_size = (*gsd_index).N as usize
                 * (*gsd_index).M as usize
                 * gsd_sizeof_type((*gsd_index).type_ as u32) as usize;
+
             // Check that the sizes match up
             if expected_size != chunk.len() * std::mem::size_of::<T>() {
                 bail!(
@@ -142,9 +148,13 @@ impl<'a> Iterator for GSDTrajectory {
     type Item = GSDFrame;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let frame = self.get_frame(self.curr).unwrap();
-        self.curr += 1;
-        Some(frame)
+        match self.get_frame(self.curr) {
+            Ok(frame) => {
+                self.curr += 1;
+                Some(frame)
+            }
+            Err(_) => None,
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
