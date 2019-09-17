@@ -11,6 +11,12 @@ members = [
 
 [dependencies]
 gsd = {path="gsd", version="0.1.0"}
+rstar = "0.5.1"
 ndarray = "0.12.1"
+nalgebra = "0.18.1"
 clap = "*"
 simple-error = "0.2.1"
+streaming-stats = "0.2.2"
+serde = {version="~1.0.98", features=["derive"]}
+csv = "1.1.1"
+indicatif = "0.12.0"
