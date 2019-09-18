@@ -4,6 +4,8 @@
 // Distributed under terms of the MIT license.
 //
 
+pub mod distance;
 pub mod order;
 
+pub use distance::*;
 pub use order::*;

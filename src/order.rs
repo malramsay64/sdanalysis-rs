@@ -4,76 +4,72 @@
 // Distributed under terms of the MIT license.
 //
 
+use crate::distance::min_image;
 use gsd;
 use nalgebra::{Quaternion, UnitQuaternion};
-use rstar::{Point, RTree};
-use simple_error::{bail, SimpleError, SimpleResult};
+use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use stats::mean;
-use std::convert::TryFrom;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct TreePoint {
+struct Position<'a> {
     point: [f32; 3],
-    index: Option<usize>,
+    index: usize,
+    cell: &'a [f32; 6],
 }
 
-impl TreePoint {
-    fn new(point: &[f32; 3], index: usize) -> Self {
-        TreePoint {
+impl<'a> Position<'a> {
+    fn new(point: &[f32; 3], index: usize, cell: &'a [f32; 6]) -> Self {
+        Position {
             point: point.clone(),
-            index: Some(index),
+            index: index,
+            cell,
         }
     }
 }
 
-impl TryFrom<&[f32]> for TreePoint {
-    type Error = SimpleError;
+impl RTreeObject for Position<'_> {
+    type Envelope = AABB<[f32; 3]>;
 
-    fn try_from(values: &[f32]) -> SimpleResult<Self> {
-        if values.len() != 3 {
-            bail!("Values doesn't have a length of 3");
-        }
-        let mut point = [0.; 3];
-        // This panics when the slices are not the same length
-        point.copy_from_slice(values);
-
-        Ok(TreePoint { point, index: None })
+    fn envelope(&self) -> Self::Envelope {
+        AABB::from_point(self.point)
     }
 }
 
-impl Point for TreePoint {
-    type Scalar = f32;
-    const DIMENSIONS: usize = 2;
+impl PointDistance for Position<'_> {
+    fn distance_2(&self, point: &[f32; 3]) -> f32 {
+        let mut distance = [
+            self.point[0] - point[0],
+            self.point[1] - point[0],
+            self.point[2] - point[2],
+        ];
+        min_image(self.cell, &mut distance);
 
-    fn generate(generator: impl Fn(usize) -> Self::Scalar) -> Self {
-        TreePoint {
-            point: [generator(0), generator(1), 0.],
-            index: None,
-        }
+        distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2]
     }
 
-    fn nth(&self, index: usize) -> Self::Scalar {
-        self.point[index]
-    }
-
-    fn nth_mut(&mut self, index: usize) -> &mut Self::Scalar {
-        &mut self.point[index]
+    fn contains_point(&self, point: &[f32; 3]) -> bool {
+        self.point[0] == point[0] && self.point[1] == point[1] && self.point[2] == point[2]
     }
 }
 
-fn array_to_points(array: &Vec<[f32; 3]>) -> Vec<TreePoint> {
+fn array_to_points<'a>(array: &Vec<[f32; 3]>, cell: &'a [f32; 6]) -> Vec<Position<'a>> {
     array
         // Iterate over the rows
         .iter()
         .enumerate()
         // Convert from slice to owned array
-        .map(|(index, row)| TreePoint::new(row, index))
+        .map(|(index, row)| Position::new(row, index, cell))
         .collect()
 }
 
-pub fn nearest_neighbours(positions: &Vec<[f32; 3]>, cutoff: f32) -> Vec<Vec<Option<usize>>> {
-    let tree = RTree::bulk_load(array_to_points(positions));
-    tree.iter()
+pub fn nearest_neighbours(
+    positions: &Vec<[f32; 3]>,
+    cutoff: f32,
+    cell: &[f32; 6],
+) -> Vec<Vec<usize>> {
+    let tree = RTree::bulk_load(array_to_points(positions, cell));
+    positions
+        .iter()
         .map(|&i| {
             tree.locate_within_distance(i, cutoff * cutoff)
                 .map(|i| i.index)
@@ -84,23 +80,23 @@ pub fn nearest_neighbours(positions: &Vec<[f32; 3]>, cutoff: f32) -> Vec<Vec<Opt
 
 pub fn orientational_order(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<f64> {
     // Find all nearest neigbours
-    let points = array_to_points(&frame.position);
-    let tree = RTree::bulk_load(points.clone());
+    let points = array_to_points(&frame.position, &frame.simulation_cell);
+    let tree = RTree::bulk_load(points);
     let orientations: Vec<UnitQuaternion<f32>> = frame
         .orientation
         .iter()
         .map(|q| UnitQuaternion::from_quaternion(Quaternion::new(q[0], q[1], q[2], q[3])))
         .collect();
     // Find the relative orientation of the nearest neighbours
-    points
+    frame
+        .position
         .iter()
-        .map(|&point| {
+        .enumerate()
+        .map(|(index, &point)| {
             mean(
                 tree.locate_within_distance(point, cutoff * cutoff)
-                    .map(|i| {
-                        orientations[point.index.unwrap()].angle_to(&orientations[i.index.unwrap()])
-                    })
-                    .map(f32::cos)
+                    .map(|i| orientations[index].angle_to(&orientations[i.index]) as f64)
+                    .map(f64::cos)
                     .map(|x| x * x),
             )
         })
