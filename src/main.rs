@@ -1,7 +1,6 @@
 use clap::{App, Arg};
 use indicatif::ProgressIterator;
 use serde::Serialize;
-use simple_error::SimpleResult;
 
 use csv;
 use gsd::GSDTrajectory;
@@ -24,8 +23,8 @@ impl Row {
     }
 }
 
-fn main() -> SimpleResult<()> {
-    let matches = App::new("GSD Parser")
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let matches = App::new("Orientational Analysis")
         .version("0.1")
         .author("Malcolm Ramsay")
         .arg(
@@ -43,8 +42,9 @@ fn main() -> SimpleResult<()> {
         .get_matches();
 
     let filename = matches.value_of("filename").unwrap();
+    let outfile = matches.value_of("outfile").unwrap();
 
-    let mut wtr = csv::Writer::from_path("test.csv").unwrap();
+    let mut wtr = csv::Writer::from_path(outfile)?;
 
     for frame in GSDTrajectory::new(filename)?.progress() {
         for (index, value) in orientational_order(&frame, 3.5).into_iter().enumerate() {
@@ -52,5 +52,6 @@ fn main() -> SimpleResult<()> {
                 .unwrap();
         }
     }
+    wtr.flush().expect("Flushing file failed");
     Ok(())
 }
