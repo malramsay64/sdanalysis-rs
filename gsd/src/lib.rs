@@ -4,7 +4,7 @@
 // Distributed under terms of the MIT license.
 //
 
-use simple_error::{bail, SimpleResult};
+use simple_error::{bail, SimpleError, SimpleResult};
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CString};
 use std::mem::MaybeUninit;
@@ -78,46 +78,47 @@ impl GSDTrajectory {
         unsafe { gsd_get_nframes(self.file_handle.get()) }
     }
 
-    fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> SimpleResult<()> {
+    fn _safe_gsd_find_chunk(&self, frame: u64, name: &str) -> SimpleResult<GSDIndexEntry> {
         let c_name = CString::new(name).expect("CString::new failed");
-        unsafe {
-            let gsd_index: *const GSDIndexEntry =
-                gsd_find_chunk(self.file_handle.get(), index, c_name.as_ptr());
+        unsafe { gsd_find_chunk(self.file_handle.get(), frame, c_name.as_ptr()).as_ref() }
+            .cloned()
+            .ok_or(SimpleError::new("Chunk not found"))
+    }
 
-            // When the find chunk fails, it returns a null pointer
-            if gsd_index.is_null() {
-                bail!("Creating handle failed");
-            }
+    fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> SimpleResult<()> {
+        let gsd_index = self._safe_gsd_find_chunk(index, name)?;
 
-            let expected_size = (*gsd_index).N as usize
-                * (*gsd_index).M as usize
-                * gsd_sizeof_type((*gsd_index).type_ as u32) as usize;
+        // This checks that we are going to read the input correctly and produces a useful error
+        // message should there be a mismatch of sizes.
+        if gsd_index.expected_size()? != chunk.len() * std::mem::size_of::<T>() {
+            bail!(
+                "Incorrect size provided for '{}',
+                 expected {} x {} values of {} bytes (total {} bytes), 
+                 found {} elements of  {} bytes",
+                name,
+                gsd_index.N,
+                gsd_index.M,
+                gsd_index.type_size()?,
+                gsd_index.expected_size()?,
+                chunk.len(),
+                std::mem::size_of::<T>()
+            );
+        }
 
-            // Check that the sizes match up
-            if expected_size != chunk.len() * std::mem::size_of::<T>() {
-                bail!(
-                    "Incorrect size provided for '{}',
-                     expected {} x {} values of {} bytes (total {} bytes), 
-                     found {} elements of  {} bytes",
-                    c_name.to_str().expect("String conversion failed"),
-                    (*gsd_index).N,
-                    (*gsd_index).M,
-                    gsd_sizeof_type((*gsd_index).type_ as u32),
-                    expected_size,
-                    chunk.len(),
-                    std::mem::size_of::<T>()
-                );
-            }
-            let returnval = gsd_read_chunk(
+        let returnval = unsafe {
+            gsd_read_chunk(
                 self.file_handle.get(),
                 chunk as *mut [T] as *mut c_void,
-                gsd_index,
-            );
-            if returnval != 0 {
-                bail!("Reading chunk '{}' failed", name)
-            }
+                &gsd_index as *const GSDIndexEntry,
+            )
+        };
+
+        match returnval {
+            0 => Ok(()),
+            -2 => Err(SimpleError::new("Invalid Input")),
+            -1 => Err(SimpleError::new("IO Failure")),
+            _ => Err(SimpleError::new("Unknown Error")),
         }
-        Ok(())
     }
 
     pub fn get_frame(&self, index: u64) -> SimpleResult<GSDFrame> {
