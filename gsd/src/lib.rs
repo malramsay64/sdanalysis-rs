@@ -9,16 +9,7 @@ use std::cell::UnsafeCell;
 use std::ffi::{c_void, CString};
 use std::mem::MaybeUninit;
 
-mod gsd_bindings {
-    #![allow(non_upper_case_globals)]
-    #![allow(non_camel_case_types)]
-    #![allow(non_snake_case)]
-    #![allow(dead_code)]
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-    pub type GSDHandle = gsd_handle;
-    pub type GSDIndexEntry = gsd_index_entry;
-}
+mod gsd_bindings;
 
 use gsd_bindings::*;
 
