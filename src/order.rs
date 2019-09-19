@@ -11,23 +11,23 @@ use rstar::{PointDistance, RTree, RTreeObject, AABB};
 use stats::mean;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct Position<'a> {
+struct Position {
     point: [f32; 3],
     index: usize,
-    cell: &'a [f32; 6],
+    cell: [f32; 6],
 }
 
-impl<'a> Position<'a> {
-    fn new(point: &[f32; 3], index: usize, cell: &'a [f32; 6]) -> Self {
+impl Position {
+    fn new(point: &[f32; 3], index: usize, cell: &[f32; 6]) -> Self {
         Position {
             point: point.clone(),
             index: index,
-            cell,
+            cell: cell.clone(),
         }
     }
 }
 
-impl RTreeObject for Position<'_> {
+impl RTreeObject for Position {
     type Envelope = AABB<[f32; 3]>;
 
     fn envelope(&self) -> Self::Envelope {
@@ -35,14 +35,14 @@ impl RTreeObject for Position<'_> {
     }
 }
 
-impl PointDistance for Position<'_> {
+impl PointDistance for Position {
     fn distance_2(&self, point: &[f32; 3]) -> f32 {
-        let mut distance = [
+        let distance = [
             self.point[0] - point[0],
-            self.point[1] - point[0],
+            self.point[1] - point[1],
             self.point[2] - point[2],
         ];
-        min_image(self.cell, &mut distance);
+        let distance = min_image(&self.cell, &distance);
 
         distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2]
     }
@@ -52,7 +52,7 @@ impl PointDistance for Position<'_> {
     }
 }
 
-fn array_to_points<'a>(array: &Vec<[f32; 3]>, cell: &'a [f32; 6]) -> Vec<Position<'a>> {
+fn array_to_points(array: &Vec<[f32; 3]>, cell: &[f32; 6]) -> Vec<Position> {
     array
         // Iterate over the rows
         .iter()
@@ -78,27 +78,43 @@ pub fn nearest_neighbours(
         .collect()
 }
 
-pub fn orientational_order(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<f64> {
-    // Find all nearest neigbours
+fn neighbour_iterator<'a>(
+    frame: &'a gsd::GSDFrame,
+    cutoff: f32,
+) -> impl Iterator<Item = Vec<Position>> + 'a {
     let points = array_to_points(&frame.position, &frame.simulation_cell);
     let tree = RTree::bulk_load(points);
+    let cutoff2 = cutoff * cutoff;
+    frame.position.iter().map(move |&point| {
+        tree.locate_within_distance(point, cutoff2)
+            .cloned()
+            .collect::<Vec<Position>>()
+    })
+}
+
+pub fn num_neighbours(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<usize> {
+    neighbour_iterator(frame, cutoff)
+        .map(|neighs| neighs.len())
+        .collect()
+}
+
+pub fn orientational_order(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<f64> {
     let orientations: Vec<UnitQuaternion<f32>> = frame
         .orientation
         .iter()
         .map(|q| UnitQuaternion::from_quaternion(Quaternion::new(q[0], q[1], q[2], q[3])))
         .collect();
-    // Find the relative orientation of the nearest neighbours
-    frame
-        .position
-        .iter()
+
+    neighbour_iterator(frame, cutoff)
         .enumerate()
-        .map(|(index, &point)| {
-            mean(
-                tree.locate_within_distance(point, cutoff * cutoff)
-                    .map(|i| orientations[index].angle_to(&orientations[i.index]) as f64)
-                    .map(f64::cos)
-                    .map(|x| x * x),
-            )
+        .map(|(index, neighs)| {
+            neighs
+                .into_iter()
+                .map(|i| orientations[index].angle_to(&orientations[i.index]) as f64)
+                .map(f64::cos)
+                .map(|x| x * x)
+                .sum::<f64>()
+                / 6.
         })
         .collect()
 }
