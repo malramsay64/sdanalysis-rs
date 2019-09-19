@@ -145,12 +145,14 @@ impl<'a> Iterator for GSDTrajectory {
     type Item = GSDFrame;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.get_frame(self.curr) {
-            Ok(frame) => {
-                self.curr += 1;
-                Some(frame)
+        self.curr += 1;
+        match self.get_frame(self.curr - 1) {
+            Ok(frame) => Some(frame),
+            Err(_) if self.curr >= self.nframes() => None,
+            Err(e) => {
+                println!("{}", e);
+                None
             }
-            Err(_) => None,
         }
     }
 
