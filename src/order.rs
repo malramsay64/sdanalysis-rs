@@ -124,5 +124,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {}
+    fn distance() {
+        let test_cell = [1., 1., 1., 0., 0., 0.];
+        let p = Position::new(&[0.; 3], 0, &test_cell);
+        let distance = p.distance_2(&[1., 0., 0.]);
+        assert_eq!(distance, 1.)
+    }
+
+    #[test]
+    fn distance_within() {
+        let test_cell = [1., 1., 1., 0., 0., 0.];
+        let p = Position::new(&[0.; 3], 0, &test_cell);
+        assert_eq!(p.distance_2_if_less_or_equal(&[1., 0., 0.], 1.), Some(1.));
+    }
 }
