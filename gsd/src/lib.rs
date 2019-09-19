@@ -82,7 +82,7 @@ impl GSDTrajectory {
         let c_name = CString::new(name).expect("CString::new failed");
         unsafe { gsd_find_chunk(self.file_handle.get(), frame, c_name.as_ptr()).as_ref() }
             .cloned()
-            .ok_or(SimpleError::new("Chunk not found"))
+            .ok_or(SimpleError::new(format!("Chunk '{}' was not found", name)))
     }
 
     fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> SimpleResult<()> {
@@ -128,10 +128,15 @@ impl GSDTrajectory {
         let mut timestep = [0_u64; 1];
         self.read_chunk(index, "configuration/step", &mut timestep)?;
         frame.timestep = timestep[0];
+        // These are required components
         self.read_chunk(index, "configuration/box", &mut frame.simulation_cell)?;
         self.read_chunk(index, "particles/orientation", &mut frame.orientation)?;
         self.read_chunk(index, "particles/position", &mut frame.position)?;
-        self.read_chunk(index, "particles/image", &mut frame.image)?;
+
+        // These are optional components
+        self.read_chunk(index, "particles/image", &mut frame.image)
+            .unwrap_or(());
+
         Ok(frame)
     }
 }
