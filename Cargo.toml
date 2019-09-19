@@ -17,6 +17,7 @@ nalgebra = "0.18.1"
 clap = "*"
 simple-error = "0.2.1"
 streaming-stats = "0.2.2"
+itertools="0.8.0"
 serde = {version="~1.0.98", features=["derive"]}
 csv = "1.1.1"
 indicatif = "0.12.0"
