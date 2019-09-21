@@ -78,7 +78,7 @@ jobs:
             override: true
 
       - name: Install clippy component using rustup
-        run: rustup component add rustfmt
+        run: rustup component add clippy
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
