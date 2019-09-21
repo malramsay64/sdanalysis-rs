@@ -9,6 +9,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
+        with:
+          submodules: true
 
       - id: component
         name: Search for latest nightly rustfmt
@@ -36,6 +38,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
+        with:
+          submodules: true
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -54,6 +58,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
+        with:
+          submodules: true
 
       - id: component
         name: Search for latest nightly clippy
