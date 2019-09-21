@@ -10,7 +10,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
         with:
-          submodule: true
+          submodules: true
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
