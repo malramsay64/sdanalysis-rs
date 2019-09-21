@@ -8,7 +8,6 @@ use crate::distance::min_image;
 use gsd;
 use nalgebra::{Quaternion, UnitQuaternion};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
-use stats::mean;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Position {
@@ -45,6 +44,13 @@ impl PointDistance for Position {
         let distance = min_image(&self.cell, &distance);
 
         distance[0] * distance[0] + distance[1] * distance[1] + distance[2] * distance[2]
+    }
+
+    fn distance_2_if_less_or_equal(&self, point: &[f32; 3], max_distance_2: f32) -> Option<f32> {
+        match self.distance_2(point) {
+            d if d < max_distance_2 => Some(d),
+            _ => None,
+        }
     }
 
     fn contains_point(&self, point: &[f32; 3]) -> bool {
@@ -125,10 +131,18 @@ mod tests {
 
     #[test]
     fn distance() {
-        let test_cell = [1., 1., 1., 0., 0., 0.];
+        let test_cell = [2., 2., 2., 0., 0., 0.];
         let p = Position::new(&[0.; 3], 0, &test_cell);
         let distance = p.distance_2(&[1., 0., 0.]);
         assert_eq!(distance, 1.)
+    }
+
+    #[test]
+    fn distance_periodic() {
+        let test_cell = [2., 2., 2., 0., 0., 0.];
+        let p = Position::new(&[0.; 3], 0, &test_cell);
+        let distance = p.distance_2(&[2., 0., 0.]);
+        assert_eq!(distance, 0.)
     }
 
     #[test]
@@ -137,14 +151,14 @@ mod tests {
         let p = Position::new(&[0.; 3], 0, &test_cell);
         assert_eq!(
             p.distance_2_if_less_or_equal(&[0.5, 0., 0.], 0.5),
-            Some(0.5)
+            Some(0.25)
         );
     }
 
     #[test]
-    fn distance_periodic() {
+    fn distance_within_periodic() {
         let test_cell = [1., 1., 1., 0., 0., 0.];
         let p = Position::new(&[0.; 3], 0, &test_cell);
-        assert_eq!(p.distance_2_if_less_or_equal(&[1., 0., 0.], 0.), Some(0.));
+        assert_eq!(p.distance_2_if_less_or_equal(&[1., 0., 0.], 0.5), Some(0.));
     }
 }
