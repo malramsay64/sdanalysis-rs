@@ -135,6 +135,16 @@ mod tests {
     fn distance_within() {
         let test_cell = [1., 1., 1., 0., 0., 0.];
         let p = Position::new(&[0.; 3], 0, &test_cell);
-        assert_eq!(p.distance_2_if_less_or_equal(&[1., 0., 0.], 1.), Some(1.));
+        assert_eq!(
+            p.distance_2_if_less_or_equal(&[0.5, 0., 0.], 0.5),
+            Some(0.5)
+        );
+    }
+
+    #[test]
+    fn distance_periodic() {
+        let test_cell = [1., 1., 1., 0., 0., 0.];
+        let p = Position::new(&[0.; 3], 0, &test_cell);
+        assert_eq!(p.distance_2_if_less_or_equal(&[1., 0., 0.], 0.), Some(0.));
     }
 }
