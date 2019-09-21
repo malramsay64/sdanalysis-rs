@@ -14,7 +14,7 @@ gsd = {path="gsd", version="0.1.0"}
 rstar = "0.5.1"
 ndarray = "0.12.1"
 nalgebra = "0.18.1"
-clap = "*"
+structopt = "0.3.0"
 simple-error = "0.2.1"
 streaming-stats = "0.2.2"
 itertools="0.8.0"

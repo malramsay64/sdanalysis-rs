@@ -1,6 +1,14 @@
-use clap::{App, Arg};
+//
+// main.rs
+// Copyright (C) 2019 Malcolm Ramsay <malramsay64@gmail.com>
+// Distributed under terms of the MIT license.
+//
+
+use std::path::PathBuf;
+
 use indicatif::ProgressIterator;
 use serde::Serialize;
+use structopt::StructOpt;
 
 use csv;
 use gsd::GSDTrajectory;
@@ -26,31 +34,34 @@ impl Row {
     }
 }
 
+#[derive(Debug, StructOpt)]
+struct Args {
+    /// The gsd file to process
+    #[structopt()]
+    filename: String,
+
+    /// File to save csv data to
+    #[structopt(parse(from_os_str))]
+    outfile: PathBuf,
+
+    /// The number of frames to read
+    #[structopt(short, long)]
+    num_frames: Option<usize>,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let matches = App::new("Orientational Analysis")
-        .version("0.1")
-        .author("Malcolm Ramsay")
-        .arg(
-            Arg::with_name("filename")
-                .index(1)
-                .required(true)
-                .help("File to process"),
-        )
-        .arg(
-            Arg::with_name("outfile")
-                .index(2)
-                .required(true)
-                .help("File to output csv data to"),
-        )
-        .get_matches();
+    let args = Args::from_args();
 
-    let filename = matches.value_of("filename").unwrap();
-    let outfile = matches.value_of("outfile").unwrap();
-
-    let mut wtr = csv::Writer::from_path(outfile)?;
+    let mut wtr = csv::Writer::from_path(args.outfile)?;
     let neighbour_distance = 3.5;
 
-    for frame in GSDTrajectory::new(filename)?.take(100).progress() {
+    let trj = GSDTrajectory::new(&args.filename)?;
+    let num_frames = match args.num_frames {
+        Some(n) => n,
+        None => trj.nframes() as usize,
+    };
+
+    for frame in trj.take(num_frames).progress() {
         for (index, order, neighs) in izip!(
             0..,
             orientational_order(&frame, neighbour_distance),
