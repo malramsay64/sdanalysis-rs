@@ -86,7 +86,7 @@ impl GSDTrajectory {
         let c_name = CString::new(name).expect("CString::new failed");
         unsafe { gsd_find_chunk(self.file_handle.get(), frame, c_name.as_ptr()).as_ref() }
             .cloned()
-            .ok_or(SimpleError::new(format!("Chunk '{}' was not found", name)))
+            .ok_or_else(|| SimpleError::new(format!("Chunk '{}' was not found", name)))
     }
 
     fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> SimpleResult<()> {
