@@ -49,9 +49,8 @@ struct Args {
     num_frames: Option<usize>,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::from_args();
-
+#[paw::main]
+fn main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let mut wtr = csv::Writer::from_path(args.outfile)?;
     let neighbour_distance = 3.5;
 
