@@ -4,7 +4,7 @@
 // Distributed under terms of the MIT license.
 //
 
-use simple_error::{bail, SimpleError, SimpleResult};
+use failure::{bail, err_msg, format_err, Error};
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CString};
 use std::mem::MaybeUninit;
@@ -55,7 +55,7 @@ pub struct GSDTrajectory {
 }
 
 impl GSDTrajectory {
-    pub fn new(filename: &str) -> SimpleResult<GSDTrajectory> {
+    pub fn new(filename: &str) -> Result<GSDTrajectory, Error> {
         let fname = CString::new(filename).unwrap();
         let mut handle = MaybeUninit::<GSDHandle>::uninit();
         let handle = unsafe {
@@ -82,14 +82,14 @@ impl GSDTrajectory {
         unsafe { gsd_get_nframes(self.file_handle.get()) }
     }
 
-    fn _safe_gsd_find_chunk(&self, frame: u64, name: &str) -> SimpleResult<GSDIndexEntry> {
-        let c_name = CString::new(name).expect("CString::new failed");
+    fn _safe_gsd_find_chunk(&self, frame: u64, name: &str) -> Result<GSDIndexEntry, Error> {
+        let c_name = CString::new(name)?;
         unsafe { gsd_find_chunk(self.file_handle.get(), frame, c_name.as_ptr()).as_ref() }
             .cloned()
-            .ok_or_else(|| SimpleError::new(format!("Chunk '{}' was not found", name)))
+            .ok_or_else(|| format_err!("Chunk '{}' was not found", name))
     }
 
-    fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> SimpleResult<()> {
+    fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> Result<(), Error> {
         let gsd_index = self._safe_gsd_find_chunk(index, name)?;
 
         // This checks that we are going to read the input correctly and produces a useful error
@@ -119,13 +119,13 @@ impl GSDTrajectory {
 
         match returnval {
             0 => Ok(()),
-            -2 => Err(SimpleError::new("Invalid Input")),
-            -1 => Err(SimpleError::new("IO Failure")),
-            _ => Err(SimpleError::new("Unknown Error")),
+            -2 => Err(err_msg("Invalid Input")),
+            -1 => Err(err_msg("IO Failure")),
+            _ => Err(err_msg("Unknown Error")),
         }
     }
 
-    pub fn get_frame(&self, index: u64) -> SimpleResult<GSDFrame> {
+    pub fn get_frame(&self, index: u64) -> Result<GSDFrame, Error> {
         let mut num_particles = [0_u32; 1];
         self.read_chunk(index, "particles/N", &mut num_particles)?;
         let mut frame = GSDFrame::new(num_particles[0] as usize);

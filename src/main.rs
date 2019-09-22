@@ -6,6 +6,7 @@
 
 use std::path::PathBuf;
 
+use failure::Error;
 use indicatif::ProgressIterator;
 use serde::Serialize;
 use structopt::StructOpt;
@@ -50,7 +51,7 @@ struct Args {
 }
 
 #[paw::main]
-fn main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+fn main(args: Args) -> Result<(), Error> {
     let mut wtr = csv::Writer::from_path(args.outfile)?;
     let neighbour_distance = 3.5;
 
@@ -66,8 +67,7 @@ fn main(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             orientational_order(&frame, neighbour_distance),
             num_neighbours(&frame, neighbour_distance),
         ) {
-            wtr.serialize(Row::new(index, frame.timestep as usize, order, neighs))
-                .unwrap();
+            wtr.serialize(Row::new(index, frame.timestep as usize, order, neighs))?;
         }
     }
     wtr.flush().expect("Flushing file failed");

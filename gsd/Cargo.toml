@@ -10,4 +10,4 @@ bindgen = "0.42.2"
 
 [dependencies]
 ndarray = "0.12.1"
-simple-error = "0.2.1"
+failure = "0.1.5"

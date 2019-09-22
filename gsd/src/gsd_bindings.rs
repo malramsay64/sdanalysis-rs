@@ -13,7 +13,7 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 pub type GSDHandle = gsd_handle;
 pub type GSDIndexEntry = gsd_index_entry;
 
-use simple_error::{SimpleError, SimpleResult};
+use failure::{err_msg, Error};
 use std::convert::TryInto;
 
 enum GSDType {
@@ -30,9 +30,9 @@ enum GSDType {
 }
 
 impl GSDType {
-    pub fn new<T: TryInto<usize>>(c_id: T) -> SimpleResult<GSDType> {
+    pub fn new<T: TryInto<usize>>(c_id: T) -> Result<GSDType, Error> {
         match c_id.try_into().unwrap_or(0) {
-            0 => Err(SimpleError::new("The type 0 is an error type")),
+            0 => Err(err_msg("The type 0 is an error type")),
             1 => Ok(GSDType::UINT8),
             2 => Ok(GSDType::UINT16),
             3 => Ok(GSDType::UINT32),
@@ -43,7 +43,7 @@ impl GSDType {
             8 => Ok(GSDType::INT64),
             9 => Ok(GSDType::FLOAT),
             10 => Ok(GSDType::DOUBLE),
-            _ => Err(SimpleError::new("The type index doens't exist")),
+            _ => Err(err_msg("The type index doens't exist")),
         }
     }
 
@@ -64,11 +64,11 @@ impl GSDType {
 }
 
 impl GSDIndexEntry {
-    pub fn type_size(&self) -> SimpleResult<usize> {
+    pub fn type_size(&self) -> Result<usize, Error> {
         GSDType::new(self.type_).map(|s| s.size())
     }
 
-    pub fn expected_size(&self) -> SimpleResult<usize> {
+    pub fn expected_size(&self) -> Result<usize, Error> {
         self.type_size()
             .map(|s| s * self.N as usize * self.M as usize)
     }
