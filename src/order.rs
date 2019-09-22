@@ -19,9 +19,9 @@ struct Position {
 impl Position {
     fn new(point: &[f32; 3], index: usize, cell: &[f32; 6]) -> Self {
         Position {
-            point: point.clone(),
-            index: index,
-            cell: cell.clone(),
+            point: *point,
+            index,
+            cell: *cell,
         }
     }
 }
@@ -53,12 +53,14 @@ impl PointDistance for Position {
         }
     }
 
+    // I want to only compare the values exactly here
+    #[allow(clippy::float_cmp)]
     fn contains_point(&self, point: &[f32; 3]) -> bool {
         self.point[0] == point[0] && self.point[1] == point[1] && self.point[2] == point[2]
     }
 }
 
-fn array_to_points(array: &Vec<[f32; 3]>, cell: &[f32; 6]) -> Vec<Position> {
+fn array_to_points(array: &[[f32; 3]], cell: &[f32; 6]) -> Vec<Position> {
     array
         // Iterate over the rows
         .iter()
@@ -68,11 +70,7 @@ fn array_to_points(array: &Vec<[f32; 3]>, cell: &[f32; 6]) -> Vec<Position> {
         .collect()
 }
 
-pub fn nearest_neighbours(
-    positions: &Vec<[f32; 3]>,
-    cutoff: f32,
-    cell: &[f32; 6],
-) -> Vec<Vec<usize>> {
+pub fn nearest_neighbours(positions: &[[f32; 3]], cutoff: f32, cell: &[f32; 6]) -> Vec<Vec<usize>> {
     let tree = RTree::bulk_load(array_to_points(positions, cell));
     positions
         .iter()
@@ -116,7 +114,7 @@ pub fn orientational_order(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<f64> {
         .map(|(index, neighs)| {
             neighs
                 .into_iter()
-                .map(|i| orientations[index].angle_to(&orientations[i.index]) as f64)
+                .map(|i| f64::from(orientations[index].angle_to(&orientations[i.index])))
                 .map(f64::cos)
                 .map(|x| x * x)
                 .sum::<f64>()

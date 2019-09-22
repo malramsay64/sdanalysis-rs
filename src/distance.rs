@@ -40,7 +40,7 @@ pub fn min_image_round(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
 /// Find the minimuim image of a point
 ///
 pub fn min_image(cell: &[f32; 6], p: &[f32; 3]) -> [f32; 3] {
-    let mut point = p.clone();
+    let mut point = *p;
     // The cell has components [x, y, z, xy, xz, yz]
 
     // Check for wrapping in the z dimension
