@@ -35,6 +35,10 @@ impl GSDFrame {
     pub fn len(&self) -> usize {
         self.position.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.position.is_empty()
+    }
 }
 
 /// A handle to a GSD Trajectory allowing interaction
