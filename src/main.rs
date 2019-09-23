@@ -61,7 +61,12 @@ fn main(args: Args) -> Result<(), Error> {
         None => trj.nframes() as usize,
     };
 
-    for frame in trj.take(num_frames).progress() {
+    let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
+        indicatif::ProgressStyle::default_bar()
+            .template("{msg}{wide_bar} {per_sec} {pos}/{len} [{elapsed_precise}/{eta_precise}]"),
+    );
+
+    for frame in trj.take(num_frames).progress_with(progress_bar) {
         for (index, order, neighs) in izip!(
             0..,
             orientational_order(&frame, neighbour_distance),
