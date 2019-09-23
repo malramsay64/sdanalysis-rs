@@ -102,23 +102,42 @@ pub fn num_neighbours(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<usize> {
         .collect()
 }
 
-pub fn orientational_order(frame: &gsd::GSDFrame, cutoff: f32) -> Vec<f64> {
+/// This computes the orientational order paramter for every particle in a configuration.
+///
+/// The orientational order parameter, is the relative orientation of the `num_neighbours`
+/// nearest particles converted into a one dimensional paramter.
+///
+pub fn orientational_order(frame: &gsd::GSDFrame, num_neighbours: usize) -> Vec<f64> {
+    // Preconvert the orientations to a quaternion representation
     let orientations: Vec<UnitQuaternion<f32>> = frame
         .orientation
         .iter()
         .map(|q| UnitQuaternion::from_quaternion(Quaternion::new(q[0], q[1], q[2], q[3])))
         .collect();
 
-    neighbour_iterator(frame, cutoff)
+    // Convert the position to a form which is understood by the RTree implementation
+    let points = array_to_points(&frame.position, &frame.simulation_cell);
+    // Load all the points into the RTree at once, which is faster and gives a better tree
+    let tree = RTree::bulk_load(points);
+
+    // Calculate the orientational_order parameter for each particle
+    frame
+        .position
+        .iter()
         .enumerate()
-        .map(|(index, neighs)| {
-            neighs
-                .into_iter()
+        .map(|(index, point)| {
+            // This finds the nearest 6 neighbours to each position and finds the relative
+            // orientation.
+            tree.nearest_neighbor_iter(point)
+                .take(num_neighbours)
+                // Using quaternions means that the only difference between 2D and 3D is the number
+                // of neighbours.
                 .map(|i| f64::from(orientations[index].angle_to(&orientations[i.index])))
                 .map(f64::cos)
                 .map(|x| x * x)
-                .sum::<f64>()
-                / 6.
+                // Take the mean using an online algorithm
+                .collect::<stats::OnlineStats>()
+                .mean()
         })
         .collect()
 }

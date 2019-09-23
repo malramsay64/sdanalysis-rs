@@ -53,7 +53,8 @@ struct Args {
 #[paw::main]
 fn main(args: Args) -> Result<(), Error> {
     let mut wtr = csv::Writer::from_path(args.outfile)?;
-    let neighbour_distance = 3.5;
+    let neighbour_distance = 8.;
+    let nneighs = 6;
 
     let trj = GSDTrajectory::new(&args.filename)?;
     let num_frames = match args.num_frames {
@@ -69,7 +70,7 @@ fn main(args: Args) -> Result<(), Error> {
     for frame in trj.take(num_frames).progress_with(progress_bar) {
         for (index, order, neighs) in izip!(
             0..,
-            orientational_order(&frame, neighbour_distance),
+            orientational_order(&frame, nneighs),
             num_neighbours(&frame, neighbour_distance),
         ) {
             wtr.serialize(Row::new(index, frame.timestep as usize, order, neighs))?;
