@@ -4,10 +4,6 @@
 // Distributed under terms of the MIT license.
 //
 
-pub fn min_image(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
-    min_image_frac(cell, point)
-}
-
 fn make_fractional(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     let mut p = [0.; 3];
 
@@ -38,75 +34,12 @@ fn make_cartesian(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     p
 }
 
-pub fn min_image_frac(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
+pub fn min_image(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     let mut fractional = make_fractional(&cell, &point);
     fractional[0] -= fractional[0].floor();
     fractional[1] -= fractional[1].floor();
     fractional[2] -= fractional[2].floor();
     make_cartesian(&cell, &fractional)
-}
-
-fn min_image_round(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
-    let mut periodic = *point;
-
-    let z_iters = (periodic[2] / cell[2]).round();
-    periodic[2] -= cell[2] * z_iters;
-    periodic[1] -= cell[1] * z_iters * cell[5];
-    periodic[0] -= cell[0] * z_iters * cell[4];
-
-    let y_iters = (periodic[1] / cell[1]).round();
-    periodic[1] -= cell[1] * y_iters;
-    periodic[0] -= cell[0] * y_iters * cell[3];
-
-    let x_iters = (periodic[0] / cell[0]).round();
-    periodic[0] -= cell[0] * x_iters;
-
-    periodic
-}
-
-/// Find the minimuim image of a point
-///
-pub fn min_image_init(cell: &[f32; 6], p: &[f32; 3]) -> [f32; 3] {
-    let mut point = *p;
-    // The cell has components [x, y, z, xy, xz, yz]
-
-    // Check for wrapping in the z dimension
-    if point[2] >= cell[2] / 2. {
-        let i = (point[2] * (1. / cell[2])).round();
-        point[2] -= i * cell[2];
-        point[1] -= i * cell[2] * cell[5];
-        point[0] -= i * cell[2] * cell[4];
-    } else if point[2] < -cell[2] / 2. {
-        let i = (-point[2] * (1. / cell[2])).round();
-        point[2] += i * cell[2];
-        point[1] += i * cell[2] * cell[5];
-        point[0] += i * cell[3] * cell[4];
-    }
-
-    let tilt_y = p[2] * cell[5];
-    if point[1] >= cell[1] / 2. + tilt_y {
-        // Number of times for the periodicity
-        let i = (point[1] * (1. / cell[1])).round();
-        point[1] -= i * cell[1];
-        point[0] -= i * cell[1] * cell[3];
-    } else if point[1] < -cell[1] / 2. + tilt_y {
-        // Number of times for the periodicity
-        let i = (-point[1] * (1. / cell[1])).round();
-        point[1] += i * cell[1];
-        point[0] += i * cell[1] * cell[3];
-    }
-
-    let tilt_x = (cell[4] - cell[5] * cell[3]) * p[2] + cell[3] * p[1];
-    if point[0] >= cell[0] / 2. + tilt_x {
-        // Number of times for the periodicity
-        let i = (point[0] * (1. / cell[0])).round();
-        point[0] -= i * cell[0];
-    } else if point[0] < -cell[0] / 2. + tilt_x {
-        // Number of times for the periodicity
-        let i = (-point[0] * (1. / cell[0])).round();
-        point[0] += i * cell[0];
-    }
-    point
 }
 
 #[cfg(test)]
@@ -200,15 +133,6 @@ mod tests {
             let cell = [1., 1., 1., 0., 0., 0.];
             let point = make_cartesian(&cell, &[x, y, z]);
             assert_eq!(min_image(&cell, &point), point);
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn within_cell_round(x in 0_f32..1_f32, y in 0_f32..1_f32, z in 0_f32..1_f32) {
-            let cell = [1., 1., 1., 0., 0., 0.];
-            let point = make_cartesian(&cell, &[x, y, z]);
-            assert_eq!(min_image_round(&cell, &point), point);
         }
     }
 
@@ -400,50 +324,6 @@ mod tests {
             assert!(point_frac[0] > -1.*std::f32::EPSILON);
             assert!(point_frac[2] <= 1.);
             assert!(point_frac[0] > -1.*std::f32::EPSILON);
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn within_cell_tilted_frac(
-            x in 0_f32..1_f32,
-            y in 0_f32..1_f32,
-            z in 0_f32..1_f32,
-            xy in -1_f32..1_f32,
-            xz in -1_f32..1_f32,
-            yz in -1_f32..1_f32
-        ) {
-            prop_assume!(x > 0. && y > 0. && z > 0.);
-            let cell = [1., 1., 1., xy, xz, yz];
-            let point = make_cartesian(&cell, &[x, y, z]);
-            let min_image_point = min_image_frac(&cell, &point);
-            assert_abs_diff_eq!(min_image_point[0], point[0]);
-            assert_abs_diff_eq!(min_image_point[1], point[1]);
-            assert_abs_diff_eq!(min_image_point[2], point[2]);
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn outside_cell_tilted_frac(
-            x in -1_f32..2_f32,
-            y in -1_f32..2_f32,
-            z in -1_f32..2_f32,
-            xy in -1_f32..1_f32,
-            xz in -1_f32..1_f32,
-            yz in -1_f32..1_f32
-        ) {
-            let cell = [1., 1., 1., xy, xz, yz];
-            let point = make_cartesian(&cell, &[x, y, z]);
-            let min_image_point = min_image_frac(&cell, &point);
-            let point_frac = make_fractional(&cell, &min_image_point);
-
-            assert!(point_frac[0] < 1.);
-            assert!(point_frac[0] >= 0.);
-            assert!(point_frac[1] <= 1.);
-            assert!(point_frac[1] >= 0.);
-            assert!(point_frac[2] < 1.);
-            assert!(point_frac[2] >= 0.);
         }
     }
 }
