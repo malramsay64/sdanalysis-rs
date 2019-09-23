@@ -41,6 +41,16 @@ pub fn min_image_frac(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     periodic[1] %= 1.;
     periodic[2] %= 1.;
 
+    if periodic[0] < 1. {
+        periodic[0] += 1.;
+    }
+    if periodic[1] < 1. {
+        periodic[1] += 1.;
+    }
+    if periodic[2] < 1. {
+        periodic[2] += 1.;
+    }
+
     make_cartesian(&cell, &periodic)
 }
 
