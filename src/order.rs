@@ -48,5 +48,4 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 }
