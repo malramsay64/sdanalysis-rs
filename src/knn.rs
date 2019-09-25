@@ -98,7 +98,7 @@ where
                         .map(|x| x.label)
                         .collect();
 
-                    let mut counts = vec![0_usize; *values.iter().max().unwrap()];
+                    let mut counts = vec![0_usize; *values.iter().max().unwrap() + 1];
                     for i in values {
                         counts[i] += 1;
                     }
@@ -121,5 +121,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {}
+    fn simple_classification() -> Result<(), Error> {
+        let mut knn = KNN::default();
+        knn.fit(&vec![[0.; 2]; 10], &vec![0; 10]);
+        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [0; 5]);
+        Ok(())
+    }
+
+    #[test]
+    fn dual_classification() -> Result<(), Error> {
+        let mut knn = KNN::default();
+        let mut features = vec![[0.; 2]; 10];
+        features.extend(&vec![[1.; 2]; 10]);
+        let mut classes = vec![0; 10];
+        classes.extend(&vec![1; 10]);
+        knn.fit(&features, &classes);
+        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [0; 5]);
+        assert_eq!(knn.predict(&vec![[1.; 2]; 5])?, [1; 5]);
+        Ok(())
+    }
+
+    #[test]
+    fn messy_classification() -> Result<(), Error> {
+        let mut knn = KNN::default();
+        let mut features = vec![[0.; 2]; 10];
+        features.extend(&vec![[1.; 2]; 10]);
+        features[0] = [1., 1.];
+        features[10] = [0., 0.];
+        let mut classes = vec![0; 10];
+        classes.extend(&vec![1; 10]);
+        knn.fit(&features, &classes);
+        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [0; 5]);
+        assert_eq!(knn.predict(&vec![[1.; 2]; 5])?, [1; 5]);
+        Ok(())
+    }
 }
