@@ -9,9 +9,12 @@
 use failure::{err_msg, Error};
 use itertools::izip;
 use rstar::{Point, PointDistance, RTree, RTreeObject, AABB};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 type Float = f32;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Features<T>
 where
     T: Point<Scalar = Float>,
@@ -54,6 +57,7 @@ where
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct KNN<T>
 where
     T: Point<Scalar = Float>,
