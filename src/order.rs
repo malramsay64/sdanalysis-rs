@@ -34,8 +34,7 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
         .enumerate()
         .map(|(index, neighs)| {
             neighs
-                .map(|i| f64::from(orientations[index].angle_to(&orientations[i])))
-                .map(f64::cos)
+                .map(|i| f64::cos(f64::from(orientations[index].angle_to(&orientations[i]))))
                 .map(|x| x * x)
                 // Take the mean using an online algorithm
                 .collect::<stats::OnlineStats>()
