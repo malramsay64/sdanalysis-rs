@@ -10,7 +10,6 @@ use failure::{err_msg, Error};
 use itertools::izip;
 use rstar::{Point, PointDistance, RTree, RTreeObject, AABB};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 type Float = f32;
 
@@ -79,18 +78,19 @@ impl<T: rstar::Point> KNN<T>
 where
     T: Point<Scalar = Float>,
 {
-    pub fn fit(&mut self, X: &[T], y: &[usize]) {
-        let values: Vec<Features<T>> = izip!(X, y)
+    pub fn fit(&mut self, features: &[T], labels: &[usize]) {
+        let values: Vec<Features<T>> = izip!(features, labels)
             .map(|(&feat, &class)| Features::new(feat, class))
             .collect();
 
         self.tree = Some(RTree::bulk_load(values));
     }
 
-    pub fn predict(&self, X: &[T]) -> Result<Vec<usize>, Error> {
+    pub fn predict(&self, features: &[T]) -> Result<Vec<usize>, Error> {
         if let Some(tree) = &self.tree {
             // Find the k-Nearest Neighbours
-            Ok(X.iter()
+            Ok(features
+                .iter()
                 .map(|feat| {
                     let values: Vec<_> = tree
                         .nearest_neighbor_iter(feat)
