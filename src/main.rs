@@ -14,6 +14,7 @@ use structopt::StructOpt;
 use csv;
 use gsd::GSDTrajectory;
 use itertools::izip;
+use sdanalysis::frame::Frame;
 use sdanalysis::{num_neighbours, orientational_order};
 
 #[derive(Serialize)]
@@ -67,7 +68,11 @@ fn main(args: Args) -> Result<(), Error> {
             .template("{msg}{wide_bar} {per_sec} {pos}/{len} [{elapsed_precise}/{eta_precise}]"),
     );
 
-    for frame in trj.take(num_frames).progress_with(progress_bar) {
+    for frame in trj
+        .map(Frame::from)
+        .take(num_frames)
+        .progress_with(progress_bar)
+    {
         for (index, order, neighs) in izip!(
             0..,
             orientational_order(&frame, nneighs),

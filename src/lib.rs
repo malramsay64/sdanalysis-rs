@@ -5,6 +5,7 @@
 //
 
 pub mod distance;
+pub mod frame;
 pub mod order;
 
 pub use distance::*;
