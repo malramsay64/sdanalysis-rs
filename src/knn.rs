@@ -25,10 +25,7 @@ where
     T: Point<Scalar = Float>,
 {
     pub fn new(features: T, label: usize) -> Features<T> {
-        Features {
-            label: label,
-            features,
-        }
+        Features { label, features }
     }
 }
 

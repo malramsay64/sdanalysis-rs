@@ -5,7 +5,6 @@
 //
 
 use crate::frame::Frame;
-use gsd;
 use nalgebra::{Quaternion, UnitQuaternion};
 
 pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
@@ -34,8 +33,11 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
         .enumerate()
         .map(|(index, neighs)| {
             neighs
-                .map(|i| f64::cos(f64::from(orientations[index].angle_to(&orientations[i]))))
-                .map(|x| x * x)
+                .map(|i| {
+                    f64::cos(f64::from(
+                        2. * orientations[index].angle_to(&orientations[i]),
+                    ))
+                })
                 // Take the mean using an online algorithm
                 .collect::<stats::OnlineStats>()
                 .mean()
