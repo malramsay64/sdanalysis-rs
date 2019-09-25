@@ -14,6 +14,26 @@ pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
         .collect()
 }
 
+pub fn relative_orientations(frame: &Frame) -> Vec<[f32; 6]> {
+    let orientations: Vec<UnitQuaternion<f32>> = frame
+        .orientation
+        .iter()
+        .map(|q| UnitQuaternion::from_quaternion(Quaternion::new(q[0], q[1], q[2], q[3])))
+        .collect();
+
+    frame
+        .neighbours_n(6)
+        .enumerate()
+        .map(|(mol_index, neighs)| {
+            let mut values = [0.; 6];
+            for (neigh_index, i) in neighs.enumerate() {
+                values[neigh_index] = orientations[mol_index].angle_to(&orientations[i])
+            }
+            values
+        })
+        .collect()
+}
+
 /// This computes the orientational order paramter for every particle in a configuration.
 ///
 /// The orientational order parameter, is the relative orientation of the `num_neighbours`

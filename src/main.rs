@@ -15,7 +15,7 @@ use csv;
 use gsd::GSDTrajectory;
 use itertools::izip;
 use sdanalysis::frame::Frame;
-use sdanalysis::{num_neighbours, orientational_order};
+use sdanalysis::order::{num_neighbours, orientational_order, relative_orientations};
 
 #[derive(Serialize)]
 struct Row {
@@ -34,6 +34,17 @@ impl Row {
             num_neighbours,
         }
     }
+}
+
+fn train_model(infiles: &[String], outfile: &PathBuf) -> Result<(), Error> {
+    let data: Vec<[f32; 6]> = Vec::new();
+    for file in infiles {
+        for frame in GSDTrajectory::new(file)?.map(Frame::from) {
+            data.append(&mut relative_orientations(frame));
+        }
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, StructOpt)]
