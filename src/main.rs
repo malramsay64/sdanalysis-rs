@@ -72,7 +72,7 @@ fn main(args: Args) -> Result<(), Error> {
     );
 
     let (tx, rx) = channel();
-    for frame in trj.take(num_frames).progress_with(progress_bar) {
+    for frame in trj.take(num_frames) {
         let tx = tx.clone();
         pool.execute(move || {
             tx.send((
@@ -82,11 +82,13 @@ fn main(args: Args) -> Result<(), Error> {
             .expect("channel will be there waiting for the pool");
         });
     }
-    for (timestep, result) in rx {
+    for (timestep, result) in rx.iter().take(num_frames) {
         for (index, order) in result.iter().enumerate() {
             wtr.serialize(Row::new(index, timestep as usize, *order))?;
         }
+        progress_bar.inc(1);
     }
     wtr.flush().expect("Flushing file failed");
+    progress_bar.finish();
     Ok(())
 }
