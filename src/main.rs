@@ -7,31 +7,29 @@
 use std::path::PathBuf;
 
 use failure::Error;
-use indicatif::ProgressIterator;
 use serde::Serialize;
+use std::sync::mpsc::channel;
 use structopt::StructOpt;
+use threadpool::ThreadPool;
 
 use csv;
 use gsd::GSDTrajectory;
-use itertools::izip;
 use sdanalysis::frame::Frame;
-use sdanalysis::{num_neighbours, orientational_order};
+use sdanalysis::orientational_order;
 
 #[derive(Serialize)]
 struct Row {
     molecule: usize,
     timestep: usize,
     orient_order: f64,
-    num_neighbours: usize,
 }
 
 impl Row {
-    fn new(molecule: usize, timestep: usize, orient_order: f64, num_neighbours: usize) -> Self {
+    fn new(molecule: usize, timestep: usize, orient_order: f64) -> Self {
         Row {
             molecule,
             timestep,
             orient_order,
-            num_neighbours,
         }
     }
 }
@@ -54,8 +52,10 @@ struct Args {
 #[paw::main]
 fn main(args: Args) -> Result<(), Error> {
     let mut wtr = csv::Writer::from_path(args.outfile)?;
-    let neighbour_distance = 8.;
     let nneighs = 6;
+
+    let n_workers = 4;
+    let pool = ThreadPool::new(n_workers);
 
     let trj = GSDTrajectory::new(&args.filename)?;
     let num_frames = match args.num_frames {
@@ -68,19 +68,36 @@ fn main(args: Args) -> Result<(), Error> {
             .template("{msg}{wide_bar} {per_sec} {pos}/{len} [{elapsed_precise}/{eta_precise}]"),
     );
 
-    for frame in trj
-        .map(Frame::from)
-        .take(num_frames)
-        .progress_with(progress_bar)
-    {
-        for (index, order, neighs) in izip!(
-            0..,
-            orientational_order(&frame, nneighs),
-            num_neighbours(&frame, neighbour_distance),
-        ) {
-            wtr.serialize(Row::new(index, frame.timestep as usize, order, neighs))?;
+    let (tx, rx) = channel::<(u64, Vec<f64>)>();
+
+    let writer_thread = std::thread::spawn(move || {
+        for (timestep, result) in rx.iter() {
+            for (index, order) in result.iter().enumerate() {
+                wtr.serialize(Row::new(index, timestep as usize, *order))
+                    .expect("Unable to serilize row");
+            }
+            progress_bar.inc(1);
         }
+        wtr.flush().expect("Flushing file failed");
+        progress_bar.finish();
+    });
+
+    for frame in trj.take(num_frames) {
+        let tx = tx.clone();
+        pool.execute(move || {
+            tx.send((
+                frame.timestep,
+                orientational_order(&Frame::from(frame), nneighs),
+            ))
+            .expect("channel will be there waiting for the pool");
+        });
     }
-    wtr.flush().expect("Flushing file failed");
+
+    // There is a clone of tx for each frame in the trajectory, each of which have called send.
+    // However, that still leaves the initial copy, so here the initial transmitter is dropped
+    // which means the writer thread will no longer be waiting for a final value to be sent.
+    drop(tx);
+
+    writer_thread.join().expect("Joining threads failed");
     Ok(())
 }
