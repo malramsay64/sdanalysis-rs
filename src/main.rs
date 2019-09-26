@@ -75,7 +75,7 @@ fn main(args: Args) -> Result<(), Error> {
     let (tx, rx): (Sender<(u64, Vec<f64>)>, Receiver<(u64, Vec<f64>)>) = channel();
 
     let writer_thread = std::thread::spawn(move || {
-        for (timestep, result) in rx.iter().take(num_frames) {
+        for (timestep, result) in rx.iter() {
             for (index, order) in result.iter().enumerate() {
                 wtr.serialize(Row::new(index, timestep as usize, *order))
                     .expect("Unable to serilize row");
@@ -96,6 +96,10 @@ fn main(args: Args) -> Result<(), Error> {
             .expect("channel will be there waiting for the pool");
         });
     }
+
+    // There is a clone of tx for each frame in the trajectory, each of which have called send.
+    // However, that still leaves the initial copy, so here the initial transmitter is dropped.
+    drop(tx);
 
     writer_thread.join().expect("Joining threads failed");
     Ok(())
