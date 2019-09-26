@@ -5,6 +5,7 @@
 //
 
 use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, Sender};
 
 use failure::Error;
 use indicatif::ProgressIterator;
@@ -57,7 +58,7 @@ fn main(args: Args) -> Result<(), Error> {
     let neighbour_distance = 8.;
     let nneighs = 6;
 
-    let n_workers = 1;
+    let n_workers = 4;
     let pool = ThreadPool::new(n_workers);
 
     let trj = GSDTrajectory::new(&args.filename)?;
@@ -71,7 +72,20 @@ fn main(args: Args) -> Result<(), Error> {
             .template("{msg}{wide_bar} {per_sec} {pos}/{len} [{elapsed_precise}/{eta_precise}]"),
     );
 
-    let (tx, rx) = channel();
+    let (tx, rx): (Sender<(u64, Vec<f64>)>, Receiver<(u64, Vec<f64>)>) = channel();
+
+    let writer_thread = std::thread::spawn(move || {
+        for (timestep, result) in rx.iter().take(num_frames) {
+            for (index, order) in result.iter().enumerate() {
+                wtr.serialize(Row::new(index, timestep as usize, *order))
+                    .expect("Unable to serilize row");
+            }
+            progress_bar.inc(1);
+        }
+        wtr.flush().expect("Flushing file failed");
+        progress_bar.finish();
+    });
+
     for frame in trj.take(num_frames) {
         let tx = tx.clone();
         pool.execute(move || {
@@ -82,13 +96,7 @@ fn main(args: Args) -> Result<(), Error> {
             .expect("channel will be there waiting for the pool");
         });
     }
-    for (timestep, result) in rx.iter().take(num_frames) {
-        for (index, order) in result.iter().enumerate() {
-            wtr.serialize(Row::new(index, timestep as usize, *order))?;
-        }
-        progress_bar.inc(1);
-    }
-    wtr.flush().expect("Flushing file failed");
-    progress_bar.finish();
+
+    writer_thread.join().expect("Joining threads failed");
     Ok(())
 }
