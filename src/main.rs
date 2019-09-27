@@ -8,7 +8,6 @@ use std::path::PathBuf;
 
 use failure::Error;
 use serde::Serialize;
-use std::sync::mpsc::channel;
 use structopt::StructOpt;
 use threadpool::ThreadPool;
 
@@ -24,16 +23,6 @@ struct Row {
     orient_order: f64,
 }
 
-impl Row {
-    fn new(molecule: usize, timestep: usize, orient_order: f64) -> Self {
-        Row {
-            molecule,
-            timestep,
-            orient_order,
-        }
-    }
-}
-
 #[derive(Debug, StructOpt)]
 struct Args {
     /// The gsd file to process
@@ -44,37 +33,40 @@ struct Args {
     #[structopt(parse(from_os_str))]
     outfile: PathBuf,
 
-    /// The number of frames to read
+    /// The number of frames to read. By default this is the total number of frames in the
+    /// trajecotry. Where a number larger than the total number of frames in the trajectory is
+    /// specified, we use the number of frames in the trajectory.
     #[structopt(short, long)]
     num_frames: Option<usize>,
 }
 
 #[paw::main]
 fn main(args: Args) -> Result<(), Error> {
-    let mut wtr = csv::Writer::from_path(args.outfile)?;
     let nneighs = 6;
-
     let n_workers = 4;
-    let pool = ThreadPool::new(n_workers);
 
     let trj = GSDTrajectory::new(&args.filename)?;
     let num_frames = match args.num_frames {
-        Some(n) => n,
+        Some(n) => n.min(trj.nframes() as usize),
         None => trj.nframes() as usize,
     };
+
+    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>)>();
 
     let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
         indicatif::ProgressStyle::default_bar()
             .template("{msg}{wide_bar} {per_sec} {pos}/{len} [{elapsed_precise}/{eta_precise}]"),
     );
-
-    let (tx, rx) = channel::<(u64, Vec<f64>)>();
-
+    let mut wtr = csv::Writer::from_path(args.outfile)?;
     let writer_thread = std::thread::spawn(move || {
         for (timestep, result) in rx.iter() {
             for (index, order) in result.iter().enumerate() {
-                wtr.serialize(Row::new(index, timestep as usize, *order))
-                    .expect("Unable to serilize row");
+                wtr.serialize(Row {
+                    molecule: index,
+                    timestep: timestep as usize,
+                    orient_order: *order,
+                })
+                .expect("Unable to serilize row");
             }
             progress_bar.inc(1);
         }
@@ -82,6 +74,7 @@ fn main(args: Args) -> Result<(), Error> {
         progress_bar.finish();
     });
 
+    let pool = ThreadPool::new(n_workers);
     for frame in trj.take(num_frames) {
         let tx = tx.clone();
         pool.execute(move || {
