@@ -69,6 +69,10 @@ impl Frame {
                 .map(|i| i.index)
         })
     }
+
+    pub fn len(&self) -> usize {
+        self.position.len()
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
