@@ -5,7 +5,6 @@
 //
 
 use crate::frame::Frame;
-use nalgebra::{Quaternion, UnitQuaternion};
 
 pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
     frame
@@ -20,13 +19,6 @@ pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
 /// nearest particles converted into a one dimensional paramter.
 ///
 pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
-    // Preconvert the orientations to a quaternion representation
-    let orientations: Vec<UnitQuaternion<f32>> = frame
-        .orientation
-        .iter()
-        .map(|q| UnitQuaternion::from_quaternion(Quaternion::new(q[0], q[1], q[2], q[3])))
-        .collect();
-
     // Calculate the orientational_order parameter for each particle
     frame
         .neighbours_n(num_neighbours)
@@ -35,7 +27,7 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
             neighs
                 .map(|i| {
                     f64::cos(f64::from(
-                        2. * orientations[index].angle_to(&orientations[i]),
+                        2. * frame.orientation[index].angle_to(&frame.orientation[i]),
                     ))
                 })
                 // Take the mean using an online algorithm

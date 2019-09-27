@@ -8,12 +8,13 @@
 
 use crate::distance::min_image;
 use gsd::GSDFrame;
+use nalgebra::{Quaternion, UnitQuaternion, Vector4};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 pub struct Frame {
     pub timestep: u64,
     pub position: Vec<[f32; 3]>,
-    pub orientation: Vec<[f32; 4]>,
+    pub orientation: Vec<UnitQuaternion<f32>>,
     pub image: Vec<[i32; 3]>,
     pub simulation_cell: [f32; 6],
 
@@ -22,12 +23,22 @@ pub struct Frame {
 
 impl From<GSDFrame> for Frame {
     fn from(frame: GSDFrame) -> Frame {
+        // Preconvert the orientations to a quaternion representation
+        let orientations: Vec<UnitQuaternion<f32>> = frame
+            .orientation
+            .into_iter()
+            .map(Vector4::from)
+            .map(Quaternion::from)
+            .map(UnitQuaternion::from_quaternion)
+            .collect();
+
         let neighbour_tree =
             RTree::bulk_load(array_to_points(&frame.position, &frame.simulation_cell));
+
         Frame {
             timestep: frame.timestep,
             position: frame.position,
-            orientation: frame.orientation,
+            orientation: orientations,
             image: frame.image,
             simulation_cell: frame.simulation_cell,
             neighbour_tree,
