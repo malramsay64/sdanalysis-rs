@@ -5,8 +5,10 @@
 //
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use failure::Error;
+use itertools::izip;
 use serde::Serialize;
 use structopt::StructOpt;
 use threadpool::ThreadPool;
@@ -14,6 +16,7 @@ use threadpool::ThreadPool;
 use csv;
 use gsd::GSDTrajectory;
 use sdanalysis::frame::Frame;
+use sdanalysis::learning::{extract_features, run_training};
 use sdanalysis::orientational_order;
 
 #[derive(Serialize)]
@@ -21,6 +24,7 @@ struct Row {
     molecule: usize,
     timestep: usize,
     orient_order: f64,
+    class: usize,
 }
 
 #[derive(Debug, StructOpt)]
@@ -38,6 +42,10 @@ struct Args {
     /// specified, we use the number of frames in the trajectory.
     #[structopt(short, long)]
     num_frames: Option<usize>,
+
+    /// The files which are going to be used for training the machine learning model
+    #[structopt(long)]
+    training: Vec<String>,
 }
 
 #[paw::main]
@@ -45,13 +53,15 @@ fn main(args: Args) -> Result<(), Error> {
     let nneighs = 6;
     let n_workers = 4;
 
+    let knn = Arc::new(run_training(args.training, 100)?);
+
     let trj = GSDTrajectory::new(&args.filename)?;
     let num_frames = match args.num_frames {
         Some(n) => n.min(trj.nframes() as usize),
         None => trj.nframes() as usize,
     };
 
-    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>)>();
+    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<usize>)>();
 
     let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
         indicatif::ProgressStyle::default_bar()
@@ -59,12 +69,13 @@ fn main(args: Args) -> Result<(), Error> {
     );
     let mut wtr = csv::Writer::from_path(args.outfile)?;
     let writer_thread = std::thread::spawn(move || {
-        for (timestep, result) in rx.iter() {
-            for (index, order) in result.iter().enumerate() {
+        for (timestep, result, classification) in rx.iter() {
+            for (index, &order, &class) in izip!(0.., result.iter(), classification.iter()) {
                 wtr.serialize(Row {
                     molecule: index,
                     timestep: timestep as usize,
-                    orient_order: *order,
+                    orient_order: order,
+                    class,
                 })
                 .expect("Unable to serilize row");
             }
@@ -77,10 +88,15 @@ fn main(args: Args) -> Result<(), Error> {
     let pool = ThreadPool::new(n_workers);
     for frame in trj.take(num_frames) {
         let tx = tx.clone();
+        let k = knn.clone();
         pool.execute(move || {
+            let f = Frame::from(frame);
             tx.send((
-                frame.timestep,
-                orientational_order(&Frame::from(frame), nneighs),
+                f.timestep,
+                orientational_order(&f, nneighs),
+                k.clone()
+                    .predict(&extract_features(&f))
+                    .unwrap_or(vec![0; f.len()]),
             ))
             .expect("channel will be there waiting for the pool");
         });
