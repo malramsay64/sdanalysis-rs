@@ -7,6 +7,7 @@
 pub mod distance;
 pub mod frame;
 pub mod knn;
+pub mod learning;
 pub mod order;
 
 pub use distance::*;
