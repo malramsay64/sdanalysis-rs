@@ -78,6 +78,11 @@ impl<T: rstar::Point> KNN<T>
 where
     T: Point<Scalar = Float>,
 {
+    /// Create an algorithm to classify new features into one of the labels
+    ///
+    /// Every time this function is run a new algorithm is generated, rather than updating or
+    /// adding points to the existing one.
+    ///
     pub fn fit(&mut self, features: &[T], labels: &[usize]) {
         let values: Vec<Features<T>> = izip!(features, labels)
             .map(|(&feat, &class)| Features::new(feat, class))
