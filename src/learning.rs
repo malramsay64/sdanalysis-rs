@@ -23,36 +23,39 @@ pub fn extract_features(frame: &Frame) -> Vec<[f32; 6]> {
         .collect()
 }
 
+fn classify_file(filename: &str, index: usize) -> Result<(Vec<([f32; 6], usize)>), Error> {
+    let crystal = 1;
+    let frame: Frame = GSDTrajectory::new(&filename)?
+        .get_frame(index as u64)?
+        .into();
+    // Initialise class to be zero for all particles
+    Ok(frame
+        .position
+        .iter()
+        .zip(extract_features(&frame))
+        .filter_map(|(position, feat)| {
+            match (
+                position[0] / frame.simulation_cell[0],
+                position[1] / frame.simulation_cell[1],
+            ) {
+                // The central region is crystalline
+                (x, y) if x.abs() < 0.3 && y.abs() < 0.3 => Some((feat, crystal)),
+                // The surrounding region is interface, so ignore
+                (x, y) if x.abs() < 0.35 && y.abs() < 0.35 => None,
+                _ => Some((feat, 0)),
+            }
+        })
+        .collect())
+}
+
 pub fn run_training(filenames: Vec<String>, index: usize) -> Result<KNN<[f32; 6]>, Error> {
     let mut knn = KNN::default();
-    let mut features: Vec<[f32; 6]> = Vec::new();
-    let mut classes: Vec<usize> = Vec::new();
-    for filename in filenames {
-        let crystal = 1;
-        let frame: Frame = GSDTrajectory::new(&filename)?
-            .get_frame(index as u64)?
-            .into();
-        // Initialise class to be zero for all particles
-        let (mut feat_file, mut feat_class): (Vec<[f32; 6]>, Vec<usize>) = frame
-            .position
-            .iter()
-            .zip(extract_features(&frame))
-            .filter_map(|(position, feat)| {
-                match (
-                    position[0] / frame.simulation_cell[0],
-                    position[1] / frame.simulation_cell[1],
-                ) {
-                    // The central region is crystalline
-                    (x, y) if x.abs() < 0.3 && y.abs() < 0.3 => Some((feat, crystal)),
-                    // The surrounding region is interface, so ignore
-                    (x, y) if x.abs() < 0.35 && y.abs() < 0.35 => None,
-                    _ => Some((feat, 0)),
-                }
-            })
-            .unzip();
-        features.append(&mut feat_file);
-        classes.append(&mut feat_class);
-    }
+    let (features, classes): (Vec<_>, Vec<_>) = filenames
+        .iter()
+        .filter_map(|f| classify_file(f, index).ok())
+        .map(|i| i.into_iter())
+        .flatten()
+        .unzip();
     knn.fit(&features, &classes);
     Ok(knn)
 }
