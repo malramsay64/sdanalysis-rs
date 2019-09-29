@@ -8,6 +8,8 @@ use crate::frame::Frame;
 use crate::knn::KNN;
 use failure::Error;
 use gsd::GSDTrajectory;
+use serde::Serialize;
+use std::str::FromStr;
 
 pub fn extract_features(frame: &Frame) -> Vec<[f32; 6]> {
     frame
@@ -23,8 +25,63 @@ pub fn extract_features(frame: &Frame) -> Vec<[f32; 6]> {
         .collect()
 }
 
-fn classify_file(filename: &str, index: usize) -> Result<(Vec<([f32; 6], usize)>), Error> {
-    let crystal = 1;
+pub trait Classification:
+    std::fmt::Debug + Clone + Copy + FromStr + Serialize + PartialEq + Eq
+{
+    fn consensus(votes: &[Self]) -> Self;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum Classes {
+    Liquid,
+    P2,
+    P2GG,
+    PG,
+}
+
+impl FromStr for Classes {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Classes, Self::Err> {
+        Ok(match s {
+            s if s.contains("-p2") => Classes::P2,
+            s if s.contains("-p2gg") => Classes::P2GG,
+            s if s.contains("-pg") => Classes::PG,
+            _ => Classes::Liquid,
+        })
+    }
+}
+
+impl Classification for Classes {
+    fn consensus(votes: &[Self]) -> Self {
+        let mut boxes = [0_usize; 4];
+        for vote in votes {
+            match vote {
+                Self::Liquid => boxes[0] += 1,
+                Self::P2 => boxes[1] += 1,
+                Self::P2GG => boxes[2] += 1,
+                Self::PG => boxes[3] += 1,
+            }
+        }
+        let max_index = boxes
+            .iter()
+            .enumerate()
+            .max_by_key(|&(_, item)| item)
+            .unwrap_or((0, &0))
+            .0;
+
+        match max_index {
+            0 => Self::Liquid,
+            1 => Self::P2,
+            2 => Self::P2GG,
+            3 => Self::PG,
+            _ => unreachable!("Assigning values to a class which doesn't exist"),
+        }
+    }
+}
+
+fn classify_file(filename: &str, index: usize) -> Result<Vec<([f32; 6], Classes)>, Error> {
+    let crystal = Classes::from_str(filename)?;
     let frame: Frame = GSDTrajectory::new(&filename)?
         .get_frame(index as u64)?
         .into();
@@ -42,13 +99,13 @@ fn classify_file(filename: &str, index: usize) -> Result<(Vec<([f32; 6], usize)>
                 (x, y) if x.abs() < 0.3 && y.abs() < 0.3 => Some((feat, crystal)),
                 // The surrounding region is interface, so ignore
                 (x, y) if x.abs() < 0.35 && y.abs() < 0.35 => None,
-                _ => Some((feat, 0)),
+                _ => Some((feat, Classes::Liquid)),
             }
         })
         .collect())
 }
 
-pub fn run_training(filenames: Vec<String>, index: usize) -> Result<KNN<[f32; 6]>, Error> {
+pub fn run_training(filenames: Vec<String>, index: usize) -> Result<KNN<[f32; 6], Classes>, Error> {
     let mut knn = KNN::default();
     let (features, classes): (Vec<_>, Vec<_>) = filenames
         .iter()

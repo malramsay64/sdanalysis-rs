@@ -4,8 +4,9 @@
 // Distributed under terms of the MIT license.
 //
 
-//! Implement a K-NN classification algorithm
+//! Implement a K-Nearest Neighbours classification algorithm
 
+use crate::learning::Classification;
 use failure::{err_msg, Error};
 use itertools::izip;
 use rstar::{Point, PointDistance, RTree, RTreeObject, AABB};
@@ -14,41 +15,45 @@ use serde::{Deserialize, Serialize};
 type Float = f32;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Features<T>
+pub struct Features<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
-    label: usize,
-    features: T,
+    features: F,
+    label: L,
 }
 
-impl<T> Features<T>
+impl<F, L> Features<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
-    pub fn new(features: T, label: usize) -> Features<T> {
+    pub fn new(features: F, label: L) -> Features<F, L> {
         Features { label, features }
     }
 }
 
-impl<T> RTreeObject for Features<T>
+impl<F, L> RTreeObject for Features<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
-    type Envelope = AABB<T>;
+    type Envelope = AABB<F>;
 
     fn envelope(&self) -> Self::Envelope {
         AABB::from_point(self.features)
     }
 }
 
-impl<T> PointDistance for Features<T>
+impl<F, L> PointDistance for Features<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
-    fn distance_2(&self, point: &T) -> T::Scalar {
+    fn distance_2(&self, point: &F) -> F::Scalar {
         let mut distance = 0.;
-        for i in 0..T::DIMENSIONS {
+        for i in 0..F::DIMENSIONS {
             let d = self.features.nth(i) - point.nth(i);
             distance += d * d;
         }
@@ -57,62 +62,56 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct KNN<T>
+pub struct KNN<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
-    tree: Option<RTree<Features<T>>>,
+    tree: Option<RTree<Features<F, L>>>,
     k: usize,
 }
 
-impl<T> Default for KNN<T>
+impl<F, L> Default for KNN<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
-    fn default() -> KNN<T> {
+    fn default() -> KNN<F, L> {
         Self { tree: None, k: 5 }
     }
 }
 
-impl<T: rstar::Point> KNN<T>
+impl<F, L> KNN<F, L>
 where
-    T: Point<Scalar = Float>,
+    F: Point<Scalar = Float>,
+    L: Classification,
 {
     /// Create an algorithm to classify new features into one of the labels
     ///
     /// Every time this function is run a new algorithm is generated, rather than updating or
     /// adding points to the existing one.
     ///
-    pub fn fit(&mut self, features: &[T], labels: &[usize]) {
-        let values: Vec<Features<T>> = izip!(features, labels)
+    pub fn fit(&mut self, features: &[F], labels: &[L]) {
+        let values: Vec<Features<F, L>> = izip!(features, labels)
             .map(|(&feat, &class)| Features::new(feat, class))
             .collect();
 
         self.tree = Some(RTree::bulk_load(values));
     }
 
-    pub fn predict(&self, features: &[T]) -> Result<Vec<usize>, Error> {
+    pub fn predict(&self, features: &[F]) -> Result<Vec<L>, Error> {
         if let Some(tree) = &self.tree {
             // Find the k-Nearest Neighbours
             Ok(features
                 .iter()
                 .map(|feat| {
-                    let values: Vec<_> = tree
+                    let values: Vec<L> = tree
                         .nearest_neighbor_iter(feat)
                         .take(self.k)
                         .map(|x| x.label)
                         .collect();
 
-                    let mut counts = vec![0_usize; *values.iter().max().unwrap() + 1];
-                    for i in values {
-                        counts[i] += 1;
-                    }
-                    counts
-                        .iter()
-                        .enumerate()
-                        .max_by_key(|&(_, item)| item)
-                        .unwrap()
-                        .0
+                    L::consensus(&values)
                 })
                 .collect())
         } else {
@@ -124,12 +123,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::learning::Classes;
 
     #[test]
     fn simple_classification() -> Result<(), Error> {
         let mut knn = KNN::default();
-        knn.fit(&vec![[0.; 2]; 10], &vec![0; 10]);
-        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [0; 5]);
+        knn.fit(&vec![[0.; 2]; 10], &vec![Classes::Liquid; 10]);
+        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [Classes::Liquid; 5]);
         Ok(())
     }
 
@@ -138,11 +138,11 @@ mod tests {
         let mut knn = KNN::default();
         let mut features = vec![[0.; 2]; 10];
         features.extend(&vec![[1.; 2]; 10]);
-        let mut classes = vec![0; 10];
-        classes.extend(&vec![1; 10]);
+        let mut classes = vec![Classes::Liquid; 10];
+        classes.extend(&vec![Classes::P2; 10]);
         knn.fit(&features, &classes);
-        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [0; 5]);
-        assert_eq!(knn.predict(&vec![[1.; 2]; 5])?, [1; 5]);
+        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [Classes::Liquid; 5]);
+        assert_eq!(knn.predict(&vec![[1.; 2]; 5])?, [Classes::P2; 5]);
         Ok(())
     }
 
@@ -153,11 +153,11 @@ mod tests {
         features.extend(&vec![[1.; 2]; 10]);
         features[0] = [1., 1.];
         features[10] = [0., 0.];
-        let mut classes = vec![0; 10];
-        classes.extend(&vec![1; 10]);
+        let mut classes = vec![Classes::Liquid; 10];
+        classes.extend(&vec![Classes::P2; 10]);
         knn.fit(&features, &classes);
-        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [0; 5]);
-        assert_eq!(knn.predict(&vec![[1.; 2]; 5])?, [1; 5]);
+        assert_eq!(knn.predict(&vec![[0.; 2]; 5])?, [Classes::Liquid; 5]);
+        assert_eq!(knn.predict(&vec![[1.; 2]; 5])?, [Classes::P2; 5]);
         Ok(())
     }
 }

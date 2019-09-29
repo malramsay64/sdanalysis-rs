@@ -16,7 +16,7 @@ use threadpool::ThreadPool;
 use csv;
 use gsd::GSDTrajectory;
 use sdanalysis::frame::Frame;
-use sdanalysis::learning::{extract_features, run_training};
+use sdanalysis::learning::{extract_features, run_training, Classes};
 use sdanalysis::orientational_order;
 
 #[derive(Serialize)]
@@ -24,7 +24,7 @@ struct Row {
     molecule: usize,
     timestep: usize,
     orient_order: f64,
-    class: usize,
+    class: Classes,
 }
 
 #[derive(Debug, StructOpt)]
@@ -61,7 +61,7 @@ fn main(args: Args) -> Result<(), Error> {
         None => trj.nframes() as usize,
     };
 
-    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<usize>)>();
+    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>)>();
 
     let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
         indicatif::ProgressStyle::default_bar()
@@ -96,7 +96,7 @@ fn main(args: Args) -> Result<(), Error> {
                 orientational_order(&f, nneighs),
                 k.clone()
                     .predict(&extract_features(&f))
-                    .unwrap_or(vec![0; f.len()]),
+                    .unwrap_or(vec![Classes::Liquid; f.len()]),
             ))
             .expect("channel will be there waiting for the pool");
         });
