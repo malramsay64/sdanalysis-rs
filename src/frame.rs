@@ -73,6 +73,10 @@ impl Frame {
     pub fn len(&self) -> usize {
         self.position.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.position.is_empty()
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

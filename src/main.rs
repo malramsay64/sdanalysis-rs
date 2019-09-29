@@ -96,7 +96,7 @@ fn main(args: Args) -> Result<(), Error> {
                 orientational_order(&f, nneighs),
                 k.clone()
                     .predict(&extract_features(&f))
-                    .unwrap_or(vec![Classes::Liquid; f.len()]),
+                    .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]),
             ))
             .expect("channel will be there waiting for the pool");
         });
