@@ -43,6 +43,10 @@ struct Args {
     #[structopt(short, long)]
     num_frames: Option<usize>,
 
+    /// Skip this many frames between configurations which are sampled
+    #[structopt(long, default_value = "1")]
+    skip_frames: usize,
+
     /// The files which are going to be used for training the machine learning model
     #[structopt(long)]
     training: Vec<String>,
@@ -58,7 +62,7 @@ fn main(args: Args) -> Result<(), Error> {
     let trj = GSDTrajectory::new(&args.filename)?;
     let num_frames = match args.num_frames {
         Some(n) => n.min(trj.nframes() as usize),
-        None => trj.nframes() as usize,
+        None => trj.nframes() as usize / args.skip_frames,
     };
 
     let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>)>();
@@ -86,7 +90,7 @@ fn main(args: Args) -> Result<(), Error> {
     });
 
     let pool = ThreadPool::new(n_workers);
-    for frame in trj.take(num_frames) {
+    for frame in trj.step_by(args.skip_frames).take(num_frames) {
         let tx = tx.clone();
         let k = knn.clone();
         pool.execute(move || {

@@ -163,6 +163,18 @@ impl<'a> Iterator for GSDTrajectory {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, Some(self.nframes() as usize))
     }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.curr += 1 + n as u64;
+        match self.get_frame(self.curr - 1) {
+            Ok(frame) => Some(frame),
+            Err(_) if self.curr >= self.nframes() => None,
+            Err(e) => {
+                println!("{}", e);
+                None
+            }
+        }
+    }
 }
 
 #[cfg(test)]
