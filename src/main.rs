@@ -15,9 +15,9 @@ use threadpool::ThreadPool;
 
 use csv;
 use gsd::GSDTrajectory;
-use sdanalysis::frame::Frame;
-use sdanalysis::learning::{extract_features, run_training, Classes};
-use sdanalysis::orientational_order;
+use trajedy::frame::Frame;
+use trajedy::learning::{extract_features, run_training, Classes};
+use trajedy::orientational_order;
 
 #[derive(Serialize)]
 struct Row {
