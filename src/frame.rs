@@ -11,6 +11,7 @@ use gsd::GSDFrame;
 use nalgebra::{Quaternion, UnitQuaternion, Vector4};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
+#[derive(Clone, Debug)]
 pub struct Frame {
     pub timestep: u64,
     pub position: Vec<[f32; 3]>,

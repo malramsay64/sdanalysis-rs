@@ -13,6 +13,7 @@ mod gsd_bindings;
 
 use gsd_bindings::*;
 
+#[derive(Clone, Debug)]
 pub struct GSDFrame {
     pub timestep: u64,
     pub position: Vec<[f32; 3]>,
