@@ -96,9 +96,9 @@ fn classify_file(filename: &str, index: usize) -> Result<Vec<([f32; 6], Classes)
                 position[1] / frame.simulation_cell[1],
             ) {
                 // The central region is crystalline
-                (x, y) if x.abs() < 0.3 && y.abs() < 0.3 => Some((feat, crystal)),
+                (x, y) if x.abs() < 0.28 && y.abs() < 0.28 => Some((feat, crystal)),
                 // The surrounding region is interface, so ignore
-                (x, y) if x.abs() < 0.35 && y.abs() < 0.35 => None,
+                (x, y) if x.abs() < 0.32 && y.abs() < 0.32 => None,
                 _ => Some((feat, Classes::Liquid)),
             }
         })
