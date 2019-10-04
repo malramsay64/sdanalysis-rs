@@ -21,7 +21,7 @@ fn make_fractional(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     p
 }
 
-fn make_cartesian(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
+pub(crate) fn make_cartesian(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     let mut p = [0.; 3];
 
     p[0] = (point[0] - 0.5) * cell[0];

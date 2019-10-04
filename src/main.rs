@@ -18,6 +18,7 @@ use gsd::GSDTrajectory;
 use trajedy::frame::Frame;
 use trajedy::learning::{extract_features, run_training, Classes};
 use trajedy::orientational_order;
+use trajedy::voronoi::voronoi_area;
 
 #[derive(Serialize)]
 struct Row {
@@ -25,6 +26,7 @@ struct Row {
     timestep: usize,
     orient_order: f64,
     class: Classes,
+    area: f64,
 }
 
 #[derive(Debug, StructOpt)]
@@ -65,7 +67,7 @@ fn main(args: Args) -> Result<(), Error> {
         None => trj.nframes() as usize / args.skip_frames,
     };
 
-    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>)>();
+    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>, Vec<f64>)>();
 
     let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
         indicatif::ProgressStyle::default_bar()
@@ -73,13 +75,19 @@ fn main(args: Args) -> Result<(), Error> {
     );
     let mut wtr = csv::Writer::from_path(args.outfile)?;
     let writer_thread = std::thread::spawn(move || {
-        for (timestep, result, classification) in rx.iter() {
-            for (index, &order, &class) in izip!(0.., result.iter(), classification.iter()) {
+        for (timestep, result, classification, area) in rx.iter() {
+            for (index, order, class, area) in izip!(
+                0..,
+                result.into_iter(),
+                classification.into_iter(),
+                area.into_iter()
+            ) {
                 wtr.serialize(Row {
                     molecule: index,
                     timestep: timestep as usize,
                     orient_order: order,
                     class,
+                    area,
                 })
                 .expect("Unable to serilize row");
             }
@@ -95,14 +103,17 @@ fn main(args: Args) -> Result<(), Error> {
         let k = knn.clone();
         pool.execute(move || {
             let f = Frame::from(frame);
-            tx.send((
-                f.timestep,
-                orientational_order(&f, nneighs),
-                k.clone()
-                    .predict(&extract_features(&f))
-                    .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]),
-            ))
-            .expect("channel will be there waiting for the pool");
+            let order = orientational_order(&f, nneighs);
+            assert_eq!(order.len(), f.len());
+            let classes = k
+                .clone()
+                .predict(&extract_features(&f))
+                .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]);
+            assert_eq!(classes.len(), f.len());
+            let area = voronoi_area(&f).unwrap();
+            assert_eq!(area.len(), f.len());
+            tx.send((f.timestep, order, classes, area))
+                .expect("channel will be there waiting for the pool");
         });
     }
 

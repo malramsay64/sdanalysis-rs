@@ -9,6 +9,7 @@ pub mod frame;
 pub mod knn;
 pub mod learning;
 pub mod order;
+pub mod voronoi;
 
 pub use distance::*;
 pub use order::*;
