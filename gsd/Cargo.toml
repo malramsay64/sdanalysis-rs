@@ -10,3 +10,9 @@ bindgen = "0.42.2"
 
 [dependencies]
 failure = "0.1.5"
+
+[dev-dependencies]
+criterion = "0.3.0"
+
+[[benches]]
+name = "iteration"

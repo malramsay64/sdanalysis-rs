@@ -32,5 +32,5 @@ approx = "*"
 criterion = "0.3.0"
 
 [[bench]]
-name = "gsd_iter"
+name = "analysis"
 harness = false
