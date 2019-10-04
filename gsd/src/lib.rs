@@ -91,7 +91,10 @@ impl GSDTrajectory {
     }
 
     fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> Result<(), Error> {
-        let gsd_index = self._safe_gsd_find_chunk(index, name)?;
+        let gsd_index = match self._safe_gsd_find_chunk(index, name) {
+            Ok(g) => g,
+            Err(_) => return Ok(()),
+        };
 
         // This checks that we are going to read the input correctly and produces a useful error
         // message should there be a mismatch of sizes.
