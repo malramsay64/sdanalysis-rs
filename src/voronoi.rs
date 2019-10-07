@@ -22,7 +22,7 @@ pub fn voronoi_area(frame: &Frame) -> Result<Vec<f64>, Error> {
         .collect();
 
     let cell_corners: Vec<_> = [[0., 0., 0.5], [1., 0., 0.5], [1., 1., 0.5], [0., 1., 0.5]]
-        .into_iter()
+        .iter()
         .map(|p| make_cartesian(&frame.simulation_cell, p))
         .map(|p| Point::new(p[0] as f64, p[1] as f64))
         .collect();
