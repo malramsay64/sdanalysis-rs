@@ -8,7 +8,7 @@ use crate::frame::Frame;
 use crate::knn::KNN;
 use failure::Error;
 use gsd::GSDTrajectory;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 pub fn extract_features(frame: &Frame) -> Vec<[f32; 6]> {
@@ -25,13 +25,11 @@ pub fn extract_features(frame: &Frame) -> Vec<[f32; 6]> {
         .collect()
 }
 
-pub trait Classification:
-    std::fmt::Debug + Clone + Copy + FromStr + Serialize + PartialEq + Eq
-{
+pub trait Classification: std::fmt::Debug + Clone + Copy + FromStr + PartialEq + Eq {
     fn consensus(votes: &[Self]) -> Self;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Classes {
     Liquid,
     P2,
