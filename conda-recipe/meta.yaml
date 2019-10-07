@@ -1,0 +1,33 @@
+{% set version = "0.2.0" %}
+
+package:
+  name: traj3dy
+  version: {{ version }}
+
+source:
+  - url: https://github.com/malramsay64/traj3dy/archive/v{{ version }}.tar.gz
+
+  - url: https://github.com/glotzerlab/gsd/archive/v1.9.3.tar.gz
+    folder: gsd/gsd_c
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - rust==1.37.0
+
+test:
+  commands:
+    - trajedy --help
+
+about:
+  home: https://github.com/malramsay64/traj3dy
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  summary: Analysis of molecular dynamics trajectories
+
+extra:
+  recipe-maintainers:
+    - malramsay64
