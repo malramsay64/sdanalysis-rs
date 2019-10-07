@@ -1,6 +1,6 @@
 [package]
 name = "trajedy"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Malcolm Ramsay <malramsay64@gmail.com>"]
 edition = "2018"
 
@@ -10,7 +10,7 @@ members = [
 ]
 
 [dependencies]
-gsd = {path="gsd", version="0.1.0"}
+gsd = {path="gsd", version="0.2.0"}
 rstar = {version="0.5.1", features=["serde"]}
 nalgebra = "0.18.1"
 structopt = {version="0.3.0", features=["paw"]}
