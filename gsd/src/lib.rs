@@ -62,7 +62,7 @@ impl GSDTrajectory {
             filename
                 .as_ref()
                 .to_str()
-                .ok_or(err_msg("Unable to convert filename to str"))?,
+                .ok_or_else(|| err_msg("Unable to convert filename to str"))?,
         )?;
         let mut handle = MaybeUninit::<GSDHandle>::uninit();
         let retvalue = unsafe {

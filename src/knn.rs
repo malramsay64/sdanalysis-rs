@@ -4,6 +4,9 @@
 // Distributed under terms of the MIT license.
 //
 
+// Causing lots of noise with serde marcro generated code
+#![allow(clippy::type_repetition_in_bounds)]
+
 //! Implement a K-Nearest Neighbours classification algorithm
 
 use crate::learning::Classification;
