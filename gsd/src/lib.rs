@@ -202,7 +202,14 @@ impl<'a> Iterator for GSDTrajectory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
-    fn it_works() {}
+    fn file_read() {
+        let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        filename.pop();
+        filename.push("trajectory.gsd");
+        println!("Filename: {:?}", &filename);
+        GSDTrajectory::new(filename).unwrap();
+    }
 }
