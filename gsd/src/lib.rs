@@ -149,6 +149,12 @@ impl GSDTrajectory {
     }
 }
 
+impl Drop for GSDTrajectory {
+    fn drop(&mut self) {
+        unsafe { gsd_close(self.file_handle.get()) };
+    }
+}
+
 impl<'a> Iterator for GSDTrajectory {
     type Item = GSDFrame;
 
