@@ -8,6 +8,7 @@ use failure::{bail, err_msg, format_err, Error};
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CString};
 use std::mem::MaybeUninit;
+use std::path::Path;
 
 mod gsd_bindings;
 
@@ -56,21 +57,32 @@ pub struct GSDTrajectory {
 }
 
 impl GSDTrajectory {
-    pub fn new(filename: &str) -> Result<GSDTrajectory, Error> {
-        let fname = CString::new(filename).unwrap();
+    pub fn new<P: AsRef<Path>>(filename: P) -> Result<GSDTrajectory, Error> {
+        let fname = CString::new(
+            filename
+                .as_ref()
+                .to_str()
+                .ok_or(err_msg("Unable to convert filename to str"))?,
+        )?;
         let mut handle = MaybeUninit::<GSDHandle>::uninit();
-        let handle = unsafe {
-            let retvalue = gsd_open(
+        let retvalue = unsafe {
+            gsd_open(
                 handle.as_mut_ptr(),
                 fname.as_ptr(),
                 gsd_open_flag_GSD_OPEN_READONLY,
-            );
-            // Check return value
-            if retvalue != 0 {
-                bail!("Opening file failed.")
-            }
+            )
+        };
+        // Check return value
+        let handle = match retvalue {
             // Opening file succeeded, assume handle is initialised
-            handle.assume_init()
+            // Sucess
+            0 => unsafe { handle.assume_init() },
+            -1 => bail!("IO Error"),
+            -2 => bail!("Not a GSD File"),
+            -3 => bail!("Invalid GSD version"),
+            -4 => bail!("File has been corrupted"),
+            -5 => bail!("Internal error, unable to allocate memory."),
+            _ => bail!("Unknown error opening file."),
         };
 
         Ok(GSDTrajectory {
