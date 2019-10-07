@@ -4,9 +4,6 @@
 // Distributed under terms of the MIT license.
 //
 
-extern crate bindgen;
-extern crate cc;
-
 use std::env;
 use std::path::PathBuf;
 

@@ -23,6 +23,7 @@ pub struct GSDFrame {
     pub simulation_cell: [f32; 6],
 }
 
+#[derive(Clone, Debug)]
 impl GSDFrame {
     fn new(n: usize) -> GSDFrame {
         GSDFrame {
@@ -48,6 +49,7 @@ impl GSDFrame {
 /// This provides a handle to interact with a GSD file, providing utilties to read individual
 /// frames in addition to being able to iterate over the entire trajectory. This provides a safe
 /// wrapper to the `gsd_open` funnction.
+#[derive(Debug)]
 pub struct GSDTrajectory {
     curr: u64,
     // The handle reuqires many mutable references, so the UnsafeCell construct is the most
