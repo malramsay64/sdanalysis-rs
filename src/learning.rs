@@ -42,8 +42,8 @@ impl FromStr for Classes {
 
     fn from_str(s: &str) -> Result<Classes, Self::Err> {
         Ok(match s {
-            s if s.contains("-p2") => Classes::P2,
             s if s.contains("-p2gg") => Classes::P2GG,
+            s if s.contains("-p2") => Classes::P2,
             s if s.contains("-pg") => Classes::PG,
             _ => Classes::Liquid,
         })
@@ -118,6 +118,24 @@ pub fn run_training(filenames: Vec<String>, index: usize) -> Result<KNN<[f32; 6]
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn create_p2() {
+        let class = Classes::from_str("test-p2").unwrap();
+        assert_eq!(class, Classes::P2);
+    }
+
+    #[test]
+    fn create_p2gg() {
+        let class = Classes::from_str("test-p2gg").unwrap();
+        assert_eq!(class, Classes::P2GG);
+    }
+
+    #[test]
+    fn create_pg() {
+        let class = Classes::from_str("test-pg").unwrap();
+        assert_eq!(class, Classes::PG);
+    }
 
     #[test]
     fn it_works() {}
