@@ -5,6 +5,7 @@
 //
 
 use crate::distance::make_cartesian;
+use crate::distance::min_image;
 use crate::frame::Frame;
 use failure::Error;
 use voronoi::{make_polygons, voronoi, Cell, Point};
@@ -18,6 +19,9 @@ pub fn voronoi_area(frame: &Frame) -> Result<Vec<f64>, Error> {
     let points: Vec<Point> = frame
         .position
         .iter()
+        // Hoomd allows positions to be outside the cell, so this wraps all the points to be inside
+        // the simulation cell.
+        .map(|p| min_image(&frame.simulation_cell, p))
         .map(|p| Point::new(f64::from(p[0]), f64::from(p[1])))
         .collect();
 
