@@ -4,6 +4,7 @@
 // Distributed under terms of the MIT license.
 //
 
+#[inline]
 fn make_fractional(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     let mut p = [0.; 3];
 
@@ -21,6 +22,7 @@ fn make_fractional(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     p
 }
 
+#[inline]
 pub(crate) fn make_cartesian(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     let mut p = [0.; 3];
 
@@ -34,6 +36,7 @@ pub(crate) fn make_cartesian(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     p
 }
 
+#[inline]
 pub fn min_image(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
     let mut fractional = make_fractional(&cell, &point);
     fractional[0] -= fractional[0].floor();
