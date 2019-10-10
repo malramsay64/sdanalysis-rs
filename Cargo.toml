@@ -36,3 +36,7 @@ harness = false
 [[bench]]
 name = "gsd_iter"
 harness = false
+
+[[bench]]
+name = "distance"
+harness = false
