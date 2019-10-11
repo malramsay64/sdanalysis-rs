@@ -26,10 +26,10 @@ struct Row {
     timestep: usize,
     orient_order: f64,
     class: Classes,
-    area: f64,
+    area: Option<f64>,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Clone, StructOpt)]
 struct Args {
     /// The gsd file to process
     #[structopt()]
@@ -52,12 +52,21 @@ struct Args {
     /// The files which are going to be used for training the machine learning model
     #[structopt(long)]
     training: Vec<String>,
+
+    /// The number of cpu cores to use for processing the trajectory
+    #[structopt(long)]
+    num_cpus: Option<usize>,
+
+    /// Whether to compute the voronoi diagram
+    #[structopt(long)]
+    voronoi: bool,
 }
 
 #[paw::main]
 fn main(args: Args) -> Result<(), Error> {
     let nneighs = 6;
     let n_workers = 4;
+    let compute_area = args.voronoi;
 
     let knn = Arc::new(run_training(args.training, 100)?);
 
@@ -67,7 +76,7 @@ fn main(args: Args) -> Result<(), Error> {
         None => trj.nframes() as usize / args.skip_frames,
     };
 
-    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>, Vec<f64>)>();
+    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>, Option<Vec<f64>>)>();
 
     let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
         indicatif::ProgressStyle::default_bar()
@@ -75,12 +84,16 @@ fn main(args: Args) -> Result<(), Error> {
     );
     let mut wtr = csv::Writer::from_path(args.outfile)?;
     let writer_thread = std::thread::spawn(move || {
-        for (timestep, result, classification, area) in rx.iter() {
+        for (timestep, results, classifications, areas) in rx.iter() {
+            let unwrapped_area: Box<dyn Iterator<Item = Option<f64>>> = match areas {
+                Some(a) => Box::new(a.into_iter().map(|x| Some(x))),
+                None => Box::new((0..).map(|_| None)),
+            };
             for (index, order, class, area) in izip!(
                 0..,
-                result.into_iter(),
-                classification.into_iter(),
-                area.into_iter()
+                results.into_iter(),
+                classifications.into_iter(),
+                unwrapped_area
             ) {
                 wtr.serialize(Row {
                     molecule: index,
@@ -110,8 +123,10 @@ fn main(args: Args) -> Result<(), Error> {
                 .predict(&extract_features(&f))
                 .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]);
             assert_eq!(classes.len(), f.len());
-            let area = voronoi_area(&f).unwrap();
-            assert_eq!(area.len(), f.len());
+            let area = match compute_area {
+                true => Some(voronoi_area(&f).unwrap()),
+                false => None,
+            };
             tx.send((f.timestep, order, classes, area))
                 .expect("channel will be there waiting for the pool");
         });
