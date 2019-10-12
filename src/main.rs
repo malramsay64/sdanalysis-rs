@@ -39,7 +39,7 @@ struct CalcResult {
 impl Into<Vec<Row>> for CalcResult {
     fn into(self) -> Vec<Row> {
         let unwrapped_area: Box<dyn Iterator<Item = Option<f64>>> = match self.area {
-            Some(a) => Box::new(a.into_iter().map(|x| Some(x))),
+            Some(a) => Box::new(a.into_iter().map(Some)),
             None => Box::new((0..).map(|_| None)),
         };
         let timestep = self.timestep as usize;
@@ -136,9 +136,10 @@ fn main(args: Args) -> Result<(), Error> {
                 .predict(&extract_features(&f))
                 .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]);
             assert_eq!(class.len(), f.len());
-            let area = match compute_area {
-                true => Some(voronoi_area(&f).unwrap()),
-                false => None,
+            let area = if compute_area {
+                Some(voronoi_area(&f).unwrap())
+            } else {
+                None
             };
             tx.send(CalcResult {
                 timestep: f.timestep as usize,
