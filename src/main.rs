@@ -11,7 +11,6 @@ use failure::Error;
 use itertools::izip;
 use serde::Serialize;
 use structopt::StructOpt;
-use threadpool::ThreadPool;
 
 use csv;
 use gsd::GSDTrajectory;
@@ -96,7 +95,6 @@ struct Args {
 #[paw::main]
 fn main(args: Args) -> Result<(), Error> {
     let nneighs = 6;
-    let n_workers = 4;
     let compute_area = args.voronoi;
 
     let knn = Arc::new(run_training(args.training, 100)?);
@@ -124,11 +122,10 @@ fn main(args: Args) -> Result<(), Error> {
         progress_bar.finish();
     });
 
-    let pool = ThreadPool::new(n_workers);
     for frame in trj.step_by(args.skip_frames).take(num_frames) {
         let tx = tx.clone();
         let k = knn.clone();
-        pool.execute(move || {
+        rayon::spawn_fifo(move || {
             let f = Frame::from(frame);
             let order = orientational_order(&f, nneighs);
             assert_eq!(order.len(), f.len());
