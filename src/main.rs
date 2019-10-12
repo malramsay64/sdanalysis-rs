@@ -29,6 +29,37 @@ struct Row {
     area: Option<f64>,
 }
 
+struct CalcResult {
+    timestep: usize,
+    orient_order: Vec<f64>,
+    class: Vec<Classes>,
+    area: Option<Vec<f64>>,
+}
+
+impl Into<Vec<Row>> for CalcResult {
+    fn into(self) -> Vec<Row> {
+        let unwrapped_area: Box<dyn Iterator<Item = Option<f64>>> = match self.area {
+            Some(a) => Box::new(a.into_iter().map(|x| Some(x))),
+            None => Box::new((0..).map(|_| None)),
+        };
+        let timestep = self.timestep as usize;
+        izip!(
+            0..,
+            self.orient_order.into_iter(),
+            self.class.into_iter(),
+            unwrapped_area,
+        )
+        .map(|(molecule, orient_order, class, area)| Row {
+            molecule,
+            timestep,
+            orient_order,
+            class,
+            area,
+        })
+        .collect()
+    }
+}
+
 #[derive(Debug, Clone, StructOpt)]
 struct Args {
     /// The gsd file to process
@@ -76,7 +107,7 @@ fn main(args: Args) -> Result<(), Error> {
         None => trj.nframes() as usize / args.skip_frames,
     };
 
-    let (tx, rx) = std::sync::mpsc::channel::<(u64, Vec<f64>, Vec<Classes>, Option<Vec<f64>>)>();
+    let (tx, rx) = std::sync::mpsc::channel::<CalcResult>();
 
     let progress_bar = indicatif::ProgressBar::new(num_frames as u64).with_style(
         indicatif::ProgressStyle::default_bar()
@@ -84,26 +115,9 @@ fn main(args: Args) -> Result<(), Error> {
     );
     let mut wtr = csv::Writer::from_path(args.outfile)?;
     let writer_thread = std::thread::spawn(move || {
-        for (timestep, results, classifications, areas) in rx.iter() {
-            let unwrapped_area: Box<dyn Iterator<Item = Option<f64>>> = match areas {
-                Some(a) => Box::new(a.into_iter().map(|x| Some(x))),
-                None => Box::new((0..).map(|_| None)),
-            };
-            for (index, order, class, area) in izip!(
-                0..,
-                results.into_iter(),
-                classifications.into_iter(),
-                unwrapped_area
-            ) {
-                wtr.serialize(Row {
-                    molecule: index,
-                    timestep: timestep as usize,
-                    orient_order: order,
-                    class,
-                    area,
-                })
-                .expect("Unable to serilize row");
-            }
+        for frame_result in rx.iter() {
+            let results: Vec<Row> = frame_result.into();
+            wtr.serialize(results).expect("Serializing frame failed");
             progress_bar.inc(1);
         }
         wtr.flush().expect("Flushing file failed");
@@ -118,17 +132,21 @@ fn main(args: Args) -> Result<(), Error> {
             let f = Frame::from(frame);
             let order = orientational_order(&f, nneighs);
             assert_eq!(order.len(), f.len());
-            let classes = k
-                .clone()
+            let class = k
                 .predict(&extract_features(&f))
                 .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]);
-            assert_eq!(classes.len(), f.len());
+            assert_eq!(class.len(), f.len());
             let area = match compute_area {
                 true => Some(voronoi_area(&f).unwrap()),
                 false => None,
             };
-            tx.send((f.timestep, order, classes, area))
-                .expect("channel will be there waiting for the pool");
+            tx.send(CalcResult {
+                timestep: f.timestep as usize,
+                orient_order: order,
+                class,
+                area,
+            })
+            .expect("channel will be there waiting for the pool");
         });
     }
 
