@@ -8,7 +8,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    cc::Build::new().file("gsd_c/gsd/gsd.c").compile("gsd");
+    cc::Build::new().file("gsd_c/gsd/gsd.c").extra_warnings(false).compile("gsd");
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
