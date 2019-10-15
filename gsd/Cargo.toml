@@ -9,4 +9,4 @@ cc = "1.0"
 bindgen = "0.51.1"
 
 [dependencies]
-failure = "0.1.5"
+failure = "0.1.6"
