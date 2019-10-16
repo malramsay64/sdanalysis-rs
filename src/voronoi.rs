@@ -8,6 +8,7 @@ use crate::distance::make_cartesian;
 use crate::distance::min_image;
 use crate::frame::Frame;
 use anyhow::Error;
+use std::convert::TryFrom;
 use voronoi::{make_polygons, voronoi, Cell, Point};
 
 /// Compute the voronoi area for each particle in a frame
@@ -31,12 +32,7 @@ pub fn voronoi_area(frame: &Frame) -> Result<Vec<f64>, Error> {
         .map(|p| Point::new(f64::from(p[0]), f64::from(p[1])))
         .collect();
 
-    let boundary: Cell = Cell::from([
-        cell_corners[0],
-        cell_corners[1],
-        cell_corners[2],
-        cell_corners[3],
-    ]);
+    let boundary: Cell = Cell::try_from(cell_corners)?;
 
     let polygons: Vec<_> = make_polygons(&voronoi(points, &boundary));
 
