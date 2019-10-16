@@ -7,7 +7,7 @@
 use crate::distance::make_cartesian;
 use crate::distance::min_image;
 use crate::frame::Frame;
-use failure::Error;
+use anyhow::Error;
 use voronoi::{make_polygons, voronoi, Cell, Point};
 
 /// Compute the voronoi area for each particle in a frame

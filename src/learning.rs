@@ -6,7 +6,7 @@
 
 use crate::frame::Frame;
 use crate::knn::KNN;
-use failure::Error;
+use anyhow::Error;
 use gsd::GSDTrajectory;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;

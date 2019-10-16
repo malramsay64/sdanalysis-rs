@@ -13,7 +13,7 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 pub type GSDHandle = gsd_handle;
 pub type GSDIndexEntry = gsd_index_entry;
 
-use failure::{err_msg, Error};
+use anyhow::{anyhow, Error};
 use std::convert::TryInto;
 
 enum GSDType {
@@ -32,7 +32,7 @@ enum GSDType {
 impl GSDType {
     pub fn new<T: TryInto<usize>>(c_id: T) -> Result<GSDType, Error> {
         match c_id.try_into().unwrap_or(0) {
-            0 => Err(err_msg("The type 0 is an error type")),
+            0 => Err(anyhow!("The type 0 is an error type")),
             1 => Ok(GSDType::UINT8),
             2 => Ok(GSDType::UINT16),
             3 => Ok(GSDType::UINT32),
@@ -43,7 +43,7 @@ impl GSDType {
             8 => Ok(GSDType::INT64),
             9 => Ok(GSDType::FLOAT),
             10 => Ok(GSDType::DOUBLE),
-            _ => Err(err_msg("The type index doens't exist")),
+            _ => Err(anyhow!("The type index doens't exist")),
         }
     }
 

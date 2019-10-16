@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use failure::Error;
+use anyhow::Error;
 use itertools::izip;
 use serde::Serialize;
 use structopt::StructOpt;
