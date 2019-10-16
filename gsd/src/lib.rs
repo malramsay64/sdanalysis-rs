@@ -4,7 +4,7 @@
 // Distributed under terms of the MIT license.
 //
 
-use failure::{bail, err_msg, format_err, Error};
+use anyhow::{anyhow, bail, Error};
 use std::cell::UnsafeCell;
 use std::ffi::{c_void, CString};
 use std::mem::MaybeUninit;
@@ -62,7 +62,7 @@ impl GSDTrajectory {
             filename
                 .as_ref()
                 .to_str()
-                .ok_or_else(|| err_msg("Unable to convert filename to str"))?,
+                .ok_or_else(|| anyhow!("Unable to convert filename to str"))?,
         )?;
         let mut handle = MaybeUninit::<GSDHandle>::uninit();
         let retvalue = unsafe {
@@ -99,7 +99,7 @@ impl GSDTrajectory {
         let c_name = CString::new(name)?;
         unsafe { gsd_find_chunk(self.file_handle.get(), frame, c_name.as_ptr()).as_ref() }
             .cloned()
-            .ok_or_else(|| format_err!("Chunk '{}' was not found", name))
+            .ok_or_else(|| anyhow!("Chunk '{}' was not found", name))
     }
 
     fn read_chunk<T: Sized>(&self, index: u64, name: &str, chunk: &mut [T]) -> Result<(), Error> {
@@ -135,9 +135,9 @@ impl GSDTrajectory {
 
         match returnval {
             0 => Ok(()),
-            -2 => Err(err_msg("Invalid Input")),
-            -1 => Err(err_msg("IO Failure")),
-            _ => Err(err_msg("Unknown Error")),
+            -2 => Err(anyhow!("Invalid Input")),
+            -1 => Err(anyhow!("IO Failure")),
+            _ => Err(anyhow!("Unknown Error")),
         }
     }
 

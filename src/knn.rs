@@ -10,7 +10,7 @@
 //! Implement a K-Nearest Neighbours classification algorithm
 
 use crate::learning::Classification;
-use failure::{err_msg, Error};
+use anyhow::{anyhow, Error};
 use itertools::izip;
 use rstar::{Point, PointDistance, RTree, RTreeObject, AABB};
 use serde::{Deserialize, Serialize};
@@ -118,7 +118,7 @@ where
                 })
                 .collect())
         } else {
-            Err(err_msg("The tree has not yet been initialised"))
+            Err(anyhow!("The tree has not yet been initialised"))
         }
     }
 }
