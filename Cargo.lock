@@ -1060,7 +1060,7 @@ dependencies = [
 
 [[package]]
 name = "trajedy"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "anyhow 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "approx 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
