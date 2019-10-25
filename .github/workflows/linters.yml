@@ -12,18 +12,10 @@ jobs:
         with:
           submodules: true
 
-      - id: component
-        name: Search for latest nightly rustfmt
-        uses: actions-rs/components-nightly@v1
-        with:
-          target: x86_64-unknown-linux-gnu
-          component: rustfmt
-
-
-      - name: Install latest nightly toolchain with rustfmt available
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: ${{ steps.component.outputs.toolchain }}
+            toolchain: stable
             override: true
 
       - name: Install rustfmt component
@@ -64,17 +56,10 @@ jobs:
         with:
           submodules: true
 
-      - id: component
-        name: Search for latest nightly clippy
-        uses: actions-rs/components-nightly@v1
-        with:
-          target: x86_64-unknown-linux-gnu
-          component: clippy
-
-      - name: Install latest nightly toolchain with clippy available
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: ${{ steps.component.outputs.toolchain }}
+            toolchain: stable
             override: true
 
       - name: Install clippy component using rustup
