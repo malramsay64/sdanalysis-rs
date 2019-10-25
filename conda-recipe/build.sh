@@ -6,6 +6,4 @@
 # Distributed under terms of the MIT license.
 #
 
-
-cargo build --release
-cargo install --bin trajedy --path . --root $PREFIX
+C_INCLUDE_PATH=$PREFIX/include LIBRARY_PATH=$PREFIX/lib cargo install --path . --root $PREFIX

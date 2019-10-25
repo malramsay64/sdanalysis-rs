@@ -15,7 +15,8 @@ build:
 
 requirements:
   build:
-    - rust==1.37.0
+    - rust==1.38.0
+    - {{ compiler('c') }}
 
 test:
   commands:
