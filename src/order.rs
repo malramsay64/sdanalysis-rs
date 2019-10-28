@@ -63,7 +63,7 @@ pub fn hexatic_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
                 .cyclic_adjacent_pairs()
                 .map(|(v1, v2)| UnitComplex::rotation_between(&v1.xy(), &v2.xy()).into_inner())
                 .fold(Complex::zero(), |acc, i| acc + i);
-            hexatic.norm() as f64
+            f64::from(hexatic.norm())
         })
         .collect()
 }
