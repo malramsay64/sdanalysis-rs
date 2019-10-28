@@ -29,9 +29,7 @@ fn orientational_order_iter(
     neighs: impl Iterator<Item = UnitQuaternion<f32>>,
     num_neighbours: usize,
 ) -> f32 {
-    neighs.fold(0., |acc, i| {
-        acc + f32::from(reference.angle_to(&i)).cos().powi(2)
-    }) / num_neighbours as f32
+    neighs.fold(0., |acc, i| acc + reference.angle_to(&i).cos().powi(2)) / num_neighbours as f32
 }
 
 /// This computes the orientational order paramter for every particle in a configuration.
