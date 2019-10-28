@@ -1064,7 +1064,7 @@ dependencies = [
 
 [[package]]
 name = "trajedy"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "adjacent-iterator 0.1.0 (git+https://github.com/malramsay64/adjacent-iterator)",
  "alga 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
