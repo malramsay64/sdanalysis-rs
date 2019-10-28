@@ -22,7 +22,7 @@ pub fn voronoi_area(frame: &Frame) -> Result<Vec<f64>, Error> {
         .iter()
         // Hoomd allows positions to be outside the cell, so this wraps all the points to be inside
         // the simulation cell.
-        .map(|p| min_image(&frame.simulation_cell, p))
+        .map(|p| min_image(&frame.simulation_cell, &p.coords.into()))
         .map(|p| Point::new(f64::from(p[0]), f64::from(p[1])))
         .collect();
 

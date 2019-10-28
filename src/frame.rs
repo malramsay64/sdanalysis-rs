@@ -8,13 +8,13 @@
 
 use crate::distance::min_image;
 use gsd::GSDFrame;
-use nalgebra::{Quaternion, UnitQuaternion, Vector4};
+use nalgebra::{Point3, Quaternion, UnitQuaternion, Vector4};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
 
 #[derive(Clone, Debug)]
 pub struct Frame {
     pub timestep: u64,
-    pub position: Vec<[f32; 3]>,
+    pub position: Vec<Point3<f32>>,
     pub orientation: Vec<UnitQuaternion<f32>>,
     pub image: Vec<[i32; 3]>,
     pub simulation_cell: [f32; 6],
@@ -25,7 +25,7 @@ pub struct Frame {
 impl From<GSDFrame> for Frame {
     fn from(frame: GSDFrame) -> Frame {
         // Preconvert the orientations to a quaternion representation
-        let orientations: Vec<UnitQuaternion<f32>> = frame
+        let orientation: Vec<UnitQuaternion<f32>> = frame
             .orientation
             .into_iter()
             .map(Vector4::from)
@@ -36,10 +36,12 @@ impl From<GSDFrame> for Frame {
         let neighbour_tree =
             RTree::bulk_load(array_to_points(&frame.position, &frame.simulation_cell));
 
+        let position: Vec<Point3<f32>> = frame.position.into_iter().map(Point3::from).collect();
+
         Frame {
             timestep: frame.timestep,
-            position: frame.position,
-            orientation: orientations,
+            position,
+            orientation,
             image: frame.image,
             simulation_cell: frame.simulation_cell,
             neighbour_tree,
@@ -52,9 +54,9 @@ impl Frame {
         &'a self,
         n: usize,
     ) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> + 'a {
-        self.position.iter().map(move |point| {
+        self.position.iter().map(move |&point| {
             self.neighbour_tree
-                .nearest_neighbor_iter(point)
+                .nearest_neighbor_iter(&point.coords.into())
                 .take(n)
                 .map(|i| i.index)
         })
@@ -66,7 +68,7 @@ impl Frame {
     ) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> + 'a {
         self.position.iter().map(move |&point| {
             self.neighbour_tree
-                .locate_within_distance(point, cutoff * cutoff)
+                .locate_within_distance(point.coords.into(), cutoff * cutoff)
                 .map(|i| i.index)
         })
     }
