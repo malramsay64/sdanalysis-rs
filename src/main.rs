@@ -16,14 +16,15 @@ use csv;
 use gsd::GSDTrajectory;
 use trajedy::frame::Frame;
 use trajedy::learning::{extract_features, run_training, Classes};
-use trajedy::orientational_order;
 use trajedy::voronoi::voronoi_area;
+use trajedy::{hexatic_order, orientational_order};
 
 #[derive(Serialize)]
 struct Row {
     molecule: usize,
     timestep: usize,
     orient_order: f64,
+    hexatic_order: f64,
     class: Classes,
     area: Option<f64>,
 }
@@ -31,6 +32,7 @@ struct Row {
 struct CalcResult {
     timestep: usize,
     orient_order: Vec<f64>,
+    hexatic_order: Vec<f64>,
     class: Vec<Classes>,
     area: Option<Vec<f64>>,
 }
@@ -45,13 +47,15 @@ impl Into<Vec<Row>> for CalcResult {
         izip!(
             0..,
             self.orient_order.into_iter(),
+            self.hexatic_order.into_iter(),
             self.class.into_iter(),
             unwrapped_area,
         )
-        .map(|(molecule, orient_order, class, area)| Row {
+        .map(|(molecule, orient_order, hexatic_order, class, area)| Row {
             molecule,
             timestep,
             orient_order,
+            hexatic_order,
             class,
             area,
         })
@@ -127,8 +131,9 @@ fn main(args: Args) -> Result<(), Error> {
         let k = knn.clone();
         rayon::spawn_fifo(move || {
             let f = Frame::from(frame);
-            let order = orientational_order(&f, nneighs);
-            assert_eq!(order.len(), f.len());
+            let orient_order = orientational_order(&f, nneighs);
+            let hexatic_order = hexatic_order(&f, nneighs);
+            assert_eq!(orient_order.len(), f.len());
             let class = k
                 .predict(&extract_features(&f))
                 .unwrap_or_else(|_| vec![Classes::Liquid; f.len()]);
@@ -140,7 +145,8 @@ fn main(args: Args) -> Result<(), Error> {
             };
             tx.send(CalcResult {
                 timestep: f.timestep as usize,
-                orient_order: order,
+                orient_order,
+                hexatic_order,
                 class,
                 area,
             })

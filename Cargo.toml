@@ -23,6 +23,9 @@ csv = "~1.1.1"
 indicatif = "~0.12.0"
 rayon = "1.2.0"
 voronoi = { git="https://github.com/malramsay64/rust_voronoi" }
+adjacent-iterator = { git="https://github.com/malramsay64/adjacent-iterator" }
+num-traits = "*"
+alga = "*"
 
 [dev-dependencies]
 proptest = "*"
