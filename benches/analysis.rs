@@ -10,8 +10,8 @@
 //! efforts in optimisation.
 //!
 
+use anyhow::Error;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use failure::Error;
 use gsd::GSDTrajectory;
 use trajedy::frame::Frame;
 use trajedy::learning::{extract_features, run_training};
