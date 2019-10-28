@@ -119,7 +119,9 @@ fn main(args: Args) -> Result<(), Error> {
     let writer_thread = std::thread::spawn(move || {
         for frame_result in rx.iter() {
             let results: Vec<Row> = frame_result.into();
-            wtr.serialize(results).expect("Serializing frame failed");
+            for row in results {
+                wtr.serialize(row).expect("Serializing frame failed");
+            }
             progress_bar.inc(1);
         }
         wtr.flush().expect("Flushing file failed");
