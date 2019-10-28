@@ -7,7 +7,7 @@
 use crate::frame::Frame;
 use adjacent_iterator::CyclicAdjacentPairIterator;
 use alga::linear::NormedSpace;
-use nalgebra::{Complex, Point3, UnitComplex};
+use nalgebra::{Complex, Point3, Rotation2, UnitComplex, UnitQuaternion};
 use num_traits::Zero;
 
 pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
@@ -17,29 +17,59 @@ pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
         .collect()
 }
 
+/// A Helper function to comptuer the orientational order
+///
+/// This provides a method by which to compute the orientational order. This is the component
+/// which is more straitforward to test.
+fn orientational_order_iter(
+    reference: &UnitQuaternion<f32>,
+    neighs: impl Iterator<Item = UnitQuaternion<f32>>,
+) -> f32 {
+    neighs.fold(0., |acc, i| {
+        acc + f32::from(reference.angle_to(&i)).cos().powi(2)
+    })
+}
+
 /// This computes the orientational order paramter for every particle in a configuration.
 ///
 /// The orientational order parameter, is the relative orientation of the `num_neighbours`
 /// nearest particles converted into a one dimensional paramter.
 ///
-pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
+pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f32> {
     // Calculate the orientational_order parameter for each particle
     frame
         .neighbours_n(num_neighbours)
         .enumerate()
         .map(|(index, neighs)| {
-            neighs
-                .map(|i| {
-                    f64::cos(f64::from(
-                        frame.orientation[index].angle_to(&frame.orientation[i]),
-                    ))
-                })
-                .map(|i| i * i)
-                // Take the mean using an online algorithm
-                .collect::<stats::OnlineStats>()
-                .mean()
+            orientational_order_iter(
+                &frame.orientation[index],
+                neighs.map(|n| frame.orientation[n]),
+            ) / num_neighbours as f32
         })
         .collect()
+}
+
+/// A Helper function to comptue the hexatic order
+///
+/// This provides a method by which to compute the hexatic order. This is the component
+/// which is more straitforward to test.
+fn hexatic_order_iter(
+    reference: &Point3<f32>,
+    neighs: impl Iterator<Item = Point3<f32>>,
+    num_neighbours: usize,
+) -> f32 {
+    neighs
+        .map(|p| p - reference)
+        .cyclic_adjacent_pairs()
+        // Calculate the rotation between two vectors
+        .map(|(v1, v2)| Rotation2::rotation_between(&v1.xy(), &v2.xy()))
+        // Convert the rotation to an angle, multiply by the k-fold symmetry
+        .map(|c| c.angle() * num_neighbours as f32)
+        // Convert the multiplied angle into a UnitComplex (rotation), then downcast to Complex
+        .map(|a| UnitComplex::from_angle(a).into_inner())
+        // Average all the complex numbers
+        .fold(Complex::zero(), |acc, i| acc + i / num_neighbours as f32)
+        .norm()
 }
 
 /// Compute the hexatic order for every particle in a configuration
@@ -51,19 +81,16 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
 ///
 /// where $k$ is the fold of the orientational ordering.
 ///
-pub fn hexatic_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
+pub fn hexatic_order(frame: &Frame, num_neighbours: usize) -> Vec<f32> {
     frame
         .neighbours_n(num_neighbours)
         .enumerate()
         .map(|(index, neighs)| {
-            let center = Point3::from(frame.position[index]);
-            let hexatic: Complex<f32> = neighs
-                .map(|i| Point3::from(frame.position[i]))
-                .map(|p| p - center)
-                .cyclic_adjacent_pairs()
-                .map(|(v1, v2)| UnitComplex::rotation_between(&v1.xy(), &v2.xy()).into_inner())
-                .fold(Complex::zero(), |acc, i| acc + i);
-            f64::from(hexatic.norm())
+            hexatic_order_iter(
+                &frame.position[index],
+                neighs.map(|i| frame.position[i]),
+                num_neighbours,
+            )
         })
         .collect()
 }
@@ -71,4 +98,95 @@ pub fn hexatic_order(frame: &Frame, num_neighbours: usize) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_abs_diff_eq;
+    use proptest::prelude::*;
+
+    #[test]
+    fn hexatic_order_perfect() {
+        let reference = Point3::new(0., 0., 0.);
+        let angles = vec![0., 60., 120., 180., 240., 300.];
+        let points = angles
+            .into_iter()
+            .map(f32::to_radians)
+            .map(f32::sin_cos)
+            .map(|(x, y)| Point3::new(x, y, 0.));
+
+        let hexatic: f32 = hexatic_order_iter(&reference, points, 6);
+        assert_abs_diff_eq!(hexatic, 1.);
+    }
+
+    #[test]
+    /// Ensure invariance to orientation of hexagon
+    fn hexatic_order_rotated() {
+        let reference = Point3::new(0., 0., 0.);
+        for i in 0..360 {
+            let angles = vec![0., 60., 120., 180., 240., 300.];
+            let points = angles
+                .into_iter()
+                .map(|a| a + i as f32)
+                .map(f32::to_radians)
+                .map(f32::sin_cos)
+                .map(|(x, y)| Point3::new(x, y, 0.));
+
+            let hexatic: f32 = hexatic_order_iter(&reference, points, 6);
+            assert_abs_diff_eq!(hexatic, 1.);
+        }
+    }
+
+    proptest! {
+        #[test]
+        /// Ensure values well behaved [0, 1]
+        fn hexatic_order_range(angles in proptest::collection::vec(0_f32..3.14, 6)) {
+            let reference = Point3::new(0., 0., 0.);
+            let points = angles
+                .into_iter()
+                .map(f32::sin_cos)
+                .map(|(x, y)| Point3::new(x, y, 0.));
+
+            let hexatic: f32 = hexatic_order_iter(&reference, points, 6);
+            assert!(0. <= hexatic && hexatic <= 1.);
+        }
+    }
+
+    #[test]
+    fn orientational_order_perfect() {
+        let reference = UnitQuaternion::from_euler_angles(0., 0., 0.);
+        let angles = vec![0.; 6];
+        let points = angles
+            .into_iter()
+            .map(|a| UnitQuaternion::from_euler_angles(0., 0., a));
+
+        let orient_order: f32 = orientational_order_iter(&reference, points);
+        assert_abs_diff_eq!(orient_order, 6.);
+    }
+
+    #[test]
+    /// Ensure invariance to orientation of hexagon
+    fn orientational_order_rotated() {
+        for i in 0..360 {
+            let reference = UnitQuaternion::from_euler_angles(0., 0., (i as f32).to_radians());
+            let angles = vec![(i as f32).to_radians(); 6];
+            let points = angles
+                .into_iter()
+                .map(|a| UnitQuaternion::from_euler_angles(0., 0., a));
+
+            let orient_order: f32 = orientational_order_iter(&reference, points);
+            assert_abs_diff_eq!(orient_order, 6.);
+        }
+    }
+
+    proptest! {
+        #[test]
+        /// Ensure values well behaved [0, 1]
+        fn orientational_order_range(angles in proptest::collection::vec(0_f32..3.14, 6)) {
+            let reference = UnitQuaternion::from_euler_angles(0., 0., 0.);
+            let points = angles
+                .into_iter()
+                .map(|a| UnitQuaternion::from_euler_angles(0., 0., a));
+
+            let orient_order: f32 = orientational_order_iter(&reference, points);
+            assert!(0. <= orient_order);
+            assert!(orient_order <= 6.);
+        }
+    }
 }

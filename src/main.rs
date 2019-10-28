@@ -23,16 +23,16 @@ use trajedy::{hexatic_order, orientational_order};
 struct Row {
     molecule: usize,
     timestep: usize,
-    orient_order: f64,
-    hexatic_order: f64,
+    orient_order: f32,
+    hexatic_order: f32,
     class: Classes,
     area: Option<f64>,
 }
 
 struct CalcResult {
     timestep: usize,
-    orient_order: Vec<f64>,
-    hexatic_order: Vec<f64>,
+    orient_order: Vec<f32>,
+    hexatic_order: Vec<f32>,
     class: Vec<Classes>,
     area: Option<Vec<f64>>,
 }
