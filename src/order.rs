@@ -17,17 +17,21 @@ pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
         .collect()
 }
 
-/// A Helper function to comptuer the orientational order
+/// A Helper function to comptue the orientational order
 ///
 /// This provides a method by which to compute the orientational order. This is the component
 /// which is more straitforward to test.
+///
+/// Returns a values in the range [0,1]
+///
 fn orientational_order_iter(
     reference: &UnitQuaternion<f32>,
     neighs: impl Iterator<Item = UnitQuaternion<f32>>,
+    num_neighbours: usize,
 ) -> f32 {
     neighs.fold(0., |acc, i| {
         acc + f32::from(reference.angle_to(&i)).cos().powi(2)
-    })
+    }) / num_neighbours as f32
 }
 
 /// This computes the orientational order paramter for every particle in a configuration.
@@ -44,7 +48,8 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f32> {
             orientational_order_iter(
                 &frame.orientation[index],
                 neighs.map(|n| frame.orientation[n]),
-            ) / num_neighbours as f32
+                num_neighbours,
+            )
         })
         .collect()
 }
@@ -53,6 +58,9 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f32> {
 ///
 /// This provides a method by which to compute the hexatic order. This is the component
 /// which is more straitforward to test.
+///
+/// Returns a values in the range [0,1]
+///
 fn hexatic_order_iter(
     reference: &Point3<f32>,
     neighs: impl Iterator<Item = Point3<f32>>,
@@ -156,8 +164,8 @@ mod tests {
             .into_iter()
             .map(|a| UnitQuaternion::from_euler_angles(0., 0., a));
 
-        let orient_order: f32 = orientational_order_iter(&reference, points);
-        assert_abs_diff_eq!(orient_order, 6.);
+        let orient_order: f32 = orientational_order_iter(&reference, points, 6);
+        assert_abs_diff_eq!(orient_order, 1.);
     }
 
     #[test]
@@ -170,8 +178,8 @@ mod tests {
                 .into_iter()
                 .map(|a| UnitQuaternion::from_euler_angles(0., 0., a));
 
-            let orient_order: f32 = orientational_order_iter(&reference, points);
-            assert_abs_diff_eq!(orient_order, 6.);
+            let orient_order: f32 = orientational_order_iter(&reference, points, 6);
+            assert_abs_diff_eq!(orient_order, 1.);
         }
     }
 
@@ -184,9 +192,9 @@ mod tests {
                 .into_iter()
                 .map(|a| UnitQuaternion::from_euler_angles(0., 0., a));
 
-            let orient_order: f32 = orientational_order_iter(&reference, points);
+            let orient_order: f32 = orientational_order_iter(&reference, points, 6);
             assert!(0. <= orient_order);
-            assert!(orient_order <= 6.);
+            assert!(orient_order <= 1.);
         }
     }
 }
