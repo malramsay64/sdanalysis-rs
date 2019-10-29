@@ -13,22 +13,10 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Through
 use gsd::GSDTrajectory;
 use std::path::PathBuf;
 
-fn create_file(c: &mut Criterion) {
-    let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    filename.push("trajectory.gsd");
-
-    let mut group = c.benchmark_group("trajectory_step_by");
-
-    group.bench_with_input(
-        BenchmarkId::from_parameter("create traj"),
-        &filename,
-        |b, filename| b.iter(|| GSDTrajectory::new(filename).expect("File not found")),
-    );
-    group.finish();
-}
-
 fn iterator_step_by(c: &mut Criterion) {
     let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    filename.push("gsd");
+    filename.push("tests");
     filename.push("trajectory.gsd");
 
     let mut group = c.benchmark_group("trajectory_step_by");
