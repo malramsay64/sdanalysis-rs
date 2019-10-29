@@ -37,5 +37,5 @@ fn iterator_step_by(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(gsd_iter, iterator_step_by, create_file);
+criterion_group!(gsd_iter, iterator_step_by);
 criterion_main!(gsd_iter);

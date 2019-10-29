@@ -207,7 +207,7 @@ mod tests {
     #[test]
     fn file_read() {
         let mut filename = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        filename.pop();
+        filename.push("tests");
         filename.push("trajectory.gsd");
         println!("Filename: {:?}", &filename);
         GSDTrajectory::new(filename).unwrap();
