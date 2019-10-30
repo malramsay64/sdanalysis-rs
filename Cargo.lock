@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "trajedy"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "alga 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
