@@ -5,7 +5,6 @@
 //
 
 use crate::frame::Frame;
-use adjacent_iterator::CyclicAdjacentPairIterator;
 use alga::linear::NormedSpace;
 use nalgebra::{Complex, Point3, Rotation2, UnitComplex, UnitQuaternion, Vector2};
 use num_traits::Zero;
