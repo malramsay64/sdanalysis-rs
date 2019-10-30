@@ -7,7 +7,7 @@
 use crate::frame::Frame;
 use adjacent_iterator::CyclicAdjacentPairIterator;
 use alga::linear::NormedSpace;
-use nalgebra::{Complex, Point3, Rotation2, UnitComplex, UnitQuaternion};
+use nalgebra::{Complex, Point3, Rotation2, UnitComplex, UnitQuaternion, Vector2};
 use num_traits::Zero;
 
 pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
@@ -64,11 +64,11 @@ fn hexatic_order_iter(
     neighs: impl Iterator<Item = Point3<f32>>,
     num_neighbours: usize,
 ) -> f32 {
+    let reference_vec = Vector2::new(0., 1.);
     neighs
         .map(|p| p - reference)
-        .cyclic_adjacent_pairs()
         // Calculate the rotation between two vectors
-        .map(|(v1, v2)| Rotation2::rotation_between(&v1.xy(), &v2.xy()))
+        .map(|v| Rotation2::rotation_between(&reference_vec.xy(), &v.xy()))
         // Convert the rotation to an angle, multiply by the k-fold symmetry
         .map(|c| c.angle() * num_neighbours as f32)
         // Convert the multiplied angle into a UnitComplex (rotation), then downcast to Complex
