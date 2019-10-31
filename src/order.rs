@@ -6,7 +6,7 @@
 
 use crate::frame::Frame;
 use alga::linear::NormedSpace;
-use nalgebra::{Complex, Point3, Rotation2, UnitComplex, UnitQuaternion, Vector2};
+use nalgebra::{Complex, ComplexField, Point3, Rotation2, UnitQuaternion, Vector2};
 use num_traits::Zero;
 
 pub fn num_neighbours(frame: &Frame, cutoff: f32) -> Vec<usize> {
@@ -53,6 +53,8 @@ pub fn orientational_order(frame: &Frame, num_neighbours: usize) -> Vec<f32> {
 
 /// A Helper function to comptue the hexatic order
 ///
+/// $$ \psi_k = \frac{1}{k} \sum_j^n \exp{i k \theta} $$
+///
 /// This provides a method by which to compute the hexatic order. This is the component
 /// which is more straitforward to test.
 ///
@@ -68,10 +70,8 @@ fn hexatic_order_iter(
         .map(|p| p - reference)
         // Calculate the rotation between two vectors
         .map(|v| Rotation2::rotation_between(&reference_vec.xy(), &v.xy()))
-        // Convert the rotation to an angle, multiply by the k-fold symmetry
-        .map(|c| c.angle() * num_neighbours as f32)
         // Convert the multiplied angle into a UnitComplex (rotation), then downcast to Complex
-        .map(|a| UnitComplex::from_angle(a).into_inner())
+        .map(|a| Complex::new(0., a.angle() * num_neighbours as f32).exp())
         // Average all the complex numbers
         .fold(Complex::zero(), |acc, i| acc + i / num_neighbours as f32)
         .norm()
