@@ -20,7 +20,7 @@ streaming-stats = "0.2.2"
 itertools="~0.8.0"
 serde = {version="~1.0.98", features=["derive"]}
 csv = "~1.1.1"
-indicatif = "~0.13.0"
+indicatif = "~0.14.0"
 rayon = "1.3.0"
 voronoi = { git="https://github.com/malramsay64/rust_voronoi" }
 num-traits = "0.2.8"
