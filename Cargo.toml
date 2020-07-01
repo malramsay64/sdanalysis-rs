@@ -37,7 +37,7 @@ bench = false
 [dev-dependencies]
 proptest = "*"
 approx = "*"
-criterion = "0.3.0"
+criterion = "0.3.3"
 
 [[bench]]
 name = "analysis"
