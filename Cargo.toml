@@ -17,7 +17,7 @@ structopt = {version="0.3", features=["paw"]}
 paw = "~1.0.0"
 anyhow = "1.0"
 streaming-stats = "0.2.2"
-itertools="~0.8.0"
+itertools="~0.10.1"
 serde = {version="~1.0.98", features=["derive"]}
 csv = "~1.1.1"
 indicatif = "~0.13.0"
