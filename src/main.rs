@@ -12,7 +12,6 @@ use itertools::izip;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use csv;
 use gsd::GSDTrajectory;
 use trajedy::frame::Frame;
 use trajedy::learning::{extract_features, run_training, Classes};
@@ -37,6 +36,7 @@ struct CalcResult {
     area: Option<Vec<f64>>,
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<Vec<Row>> for CalcResult {
     fn into(self) -> Vec<Row> {
         let unwrapped_area: Box<dyn Iterator<Item = Option<f64>>> = match self.area {
@@ -86,10 +86,6 @@ struct Args {
     /// The files which are going to be used for training the machine learning model
     #[structopt(long)]
     training: Vec<String>,
-
-    /// The number of cpu cores to use for processing the trajectory
-    #[structopt(long)]
-    num_cpus: Option<usize>,
 
     /// Whether to compute the voronoi diagram
     #[structopt(long)]

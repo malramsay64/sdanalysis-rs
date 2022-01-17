@@ -53,7 +53,7 @@ impl Frame {
     pub fn neighbours_n<'a>(
         &'a self,
         n: usize,
-    ) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> + 'a {
+    ) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> + '_ {
         self.position.iter().map(move |&point| {
             self.neighbour_tree
                 .nearest_neighbor_iter(&point.coords.into())
@@ -65,7 +65,7 @@ impl Frame {
     pub fn neighbours_cutoff<'a>(
         &'a self,
         cutoff: f32,
-    ) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> + 'a {
+    ) -> impl Iterator<Item = impl Iterator<Item = usize> + 'a> + '_ {
         self.position.iter().map(move |&point| {
             self.neighbour_tree
                 .locate_within_distance(point.coords.into(), cutoff * cutoff)

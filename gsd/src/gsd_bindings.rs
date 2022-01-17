@@ -25,8 +25,8 @@ enum GSDType {
     INT16,
     INT32,
     INT64,
-    FLOAT,
-    DOUBLE,
+    Float,
+    Double,
 }
 
 impl GSDType {
@@ -41,8 +41,8 @@ impl GSDType {
             6 => Ok(GSDType::INT16),
             7 => Ok(GSDType::INT32),
             8 => Ok(GSDType::INT64),
-            9 => Ok(GSDType::FLOAT),
-            10 => Ok(GSDType::DOUBLE),
+            9 => Ok(GSDType::Float),
+            10 => Ok(GSDType::Double),
             _ => Err(anyhow!("The type index doens't exist")),
         }
     }
@@ -57,8 +57,8 @@ impl GSDType {
             GSDType::INT16 => 2,
             GSDType::INT32 => 4,
             GSDType::INT64 => 8,
-            GSDType::FLOAT => 4,
-            GSDType::DOUBLE => 8,
+            GSDType::Float => 4,
+            GSDType::Double => 8,
         }
     }
 }

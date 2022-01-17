@@ -38,11 +38,11 @@ pub(crate) fn make_cartesian(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
 
 #[inline]
 pub fn min_image(cell: &[f32; 6], point: &[f32; 3]) -> [f32; 3] {
-    let mut fractional = make_fractional(&cell, &point);
+    let mut fractional = make_fractional(cell, point);
     fractional[0] -= fractional[0].floor();
     fractional[1] -= fractional[1].floor();
     fractional[2] -= fractional[2].floor();
-    make_cartesian(&cell, &fractional)
+    make_cartesian(cell, &fractional)
 }
 
 #[cfg(test)]
