@@ -5,7 +5,6 @@
 //
 
 use crate::frame::Frame;
-use alga::linear::NormedSpace;
 use nalgebra::{Complex, ComplexField, Point3, Rotation2, UnitQuaternion, Vector2};
 use num_traits::Zero;
 
@@ -73,8 +72,11 @@ fn hexatic_order_iter(
         // Convert the multiplied angle into a UnitComplex (rotation), then downcast to Complex
         .map(|a| Complex::new(0., a.angle() * num_neighbours as f32).exp())
         // Average all the complex numbers
-        .fold(Complex::zero(), |acc, i| acc + i / num_neighbours as f32)
-        .norm()
+        .fold(Complex::<f32>::zero(), |acc, i| {
+            acc + i / num_neighbours as f32
+        })
+        .norm_sqr()
+        .sqrt()
 }
 
 /// Compute the hexatic order for every particle in a configuration
