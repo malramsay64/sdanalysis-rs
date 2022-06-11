@@ -1,6 +1,6 @@
 //
 // main.rs
-// Copyright (C) 2019 Malcolm Ramsay <malramsay64@gmail.com>
+// Copyright (C) 2022 Malcolm Ramsay <m@malramsay.com>
 // Distributed under terms of the MIT license.
 //
 
@@ -8,9 +8,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Error;
+use clap::Parser;
 use itertools::izip;
 use serde::Serialize;
-use structopt::StructOpt;
 
 use gsd::GSDTrajectory;
 use trajedy::frame::Frame;
@@ -63,37 +63,38 @@ impl Into<Vec<Row>> for CalcResult {
     }
 }
 
-#[derive(Debug, Clone, StructOpt)]
+#[derive(Parser, Debug, Clone)]
+#[clap(author, version, about, long_about=None)]
 struct Args {
     /// The gsd file to process
-    #[structopt()]
+    #[clap()]
     filename: String,
 
     /// File to save csv data to
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     outfile: PathBuf,
 
     /// The number of frames to read. By default this is the total number of frames in the
     /// trajecotry. Where a number larger than the total number of frames in the trajectory is
     /// specified, we use the number of frames in the trajectory.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     num_frames: Option<usize>,
 
     /// Skip this many frames between configurations which are sampled
-    #[structopt(long, default_value = "1")]
+    #[clap(long, default_value = "1")]
     skip_frames: usize,
 
     /// The files which are going to be used for training the machine learning model
-    #[structopt(long)]
+    #[clap(long)]
     training: Vec<String>,
 
     /// Whether to compute the voronoi diagram
-    #[structopt(long)]
+    #[clap(long)]
     voronoi: bool,
 }
 
-#[paw::main]
-fn main(args: Args) -> Result<(), Error> {
+fn main() -> Result<(), Error> {
+    let args = Args::parse();
     let nneighs = 6;
     let compute_area = args.voronoi;
 

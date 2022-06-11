@@ -21,14 +21,14 @@ fn main() {
         // bindings for.
         .header("gsd_c/gsd/gsd.h")
         // Whitelist the functions and types which are required
-        .whitelist_type("gsd_index_entry")
-        .whitelist_type("gsd_handle")
-        .whitelist_function("gsd_open")
-        .whitelist_function("gsd_close")
-        .whitelist_function("gsd_get_nframes")
-        .whitelist_function("gsd_read_chunk")
-        .whitelist_function("gsd_find_chunk")
-        .whitelist_function("gsd_sizeof_type")
+        .allowlist_type("gsd_index_entry")
+        .allowlist_type("gsd_handle")
+        .allowlist_function("gsd_open")
+        .allowlist_function("gsd_close")
+        .allowlist_function("gsd_get_nframes")
+        .allowlist_function("gsd_read_chunk")
+        .allowlist_function("gsd_find_chunk")
+        .allowlist_function("gsd_sizeof_type")
         .derive_debug(true)
         // Finish the builder and generate the bindings.
         .generate()

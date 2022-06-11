@@ -108,8 +108,7 @@ pub fn run_training(filenames: Vec<String>, index: usize) -> Result<KNN<[f32; 6]
     let (features, classes): (Vec<_>, Vec<_>) = filenames
         .iter()
         .filter_map(|f| classify_file(f, index).ok())
-        .map(|i| i.into_iter())
-        .flatten()
+        .flat_map(|i| i.into_iter())
         .unzip();
     knn.fit(&features, &classes);
     Ok(knn)
