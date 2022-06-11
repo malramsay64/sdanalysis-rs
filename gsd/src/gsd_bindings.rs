@@ -82,8 +82,8 @@ mod tests {
     /// Ensure the size of the Rust types match those defined in the C implementaion
     fn gsd_type_size() {
         for i in 0..20 {
-            let rust_ver = GSDType::new(i).map(|s| s.size()).unwrap_or(0);
-            let c_ver = unsafe { gsd_sizeof_type(i) };
+            let rust_ver: u64 = GSDType::new(i).map(|s| s.size()).unwrap_or(0) as u64;
+            let c_ver: u64 = unsafe { gsd_sizeof_type(i) };
 
             assert_eq!(rust_ver, c_ver);
         }
